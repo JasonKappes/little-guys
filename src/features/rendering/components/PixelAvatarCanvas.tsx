@@ -1,7 +1,12 @@
 import { useEffect, useRef } from 'react'
 
 import type { PixelRenderStyle } from '@/features/avatar/avatars'
-import { paintPixelAvatar, type PixelAvatarFrame } from '@/features/rendering/pixelRenderer'
+import type { PaintLook } from '@/features/rendering/paintPlan'
+import {
+  paintPixelAvatar,
+  readPixelFrame,
+  type PixelAvatarFrame,
+} from '@/features/rendering/pixelRenderer'
 import type { RenderedColors, RenderedScene } from '@/features/rendering/renderedScene'
 
 export function StaticPixelAvatarCanvas({
@@ -31,11 +36,13 @@ export function LivePixelAvatarCanvas({
   scene,
   colors,
   style,
+  look,
   className,
 }: {
   scene: RenderedScene
   colors: RenderedColors
   style: PixelRenderStyle
+  look?: PaintLook
   className: string
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -47,39 +54,16 @@ export function LivePixelAvatarCanvas({
     canvas.width = style.resolution
     canvas.height = style.resolution
     let frameRequest: number | null = null
-    const readPaths = (paths: RenderedScene['backPaths']) => {
-      const values: string[] = []
-      paths.forEach(path => {
-        const value = path.get()
-        if (value) values.push(value)
-      })
-      return values
-    }
     const paint = () => {
       frameRequest = null
-      paintPixelAvatar(
-        context,
-        {
-          headPath: scene.headPath.get(),
-          backPaths: readPaths(scene.backPaths),
-          frontPaths: readPaths(scene.frontPaths),
-          leftPath: scene.leftPath.get(),
-          rightPath: scene.rightPath.get(),
-          leftOpacity: scene.leftOpacity.get(),
-          rightOpacity: scene.rightOpacity.get(),
-          offsetX: scene.offsetX.get(),
-          offsetY: scene.offsetY.get(),
-          bodyColor: colors.body.get(),
-          eyeColor: colors.eyes.get(),
-        },
-        style
-      )
+      paintPixelAvatar(context, readPixelFrame(scene, colors, look), style)
     }
     const schedulePaint = () => {
       if (frameRequest === null) frameRequest = requestAnimationFrame(paint)
     }
     const values = [
       scene.headPath,
+      scene.bodyFillPath,
       ...scene.backPaths,
       ...scene.frontPaths,
       scene.leftPath,
@@ -88,6 +72,7 @@ export function LivePixelAvatarCanvas({
       scene.rightOpacity,
       scene.offsetX,
       scene.offsetY,
+      scene.paint,
       colors.body,
       colors.eyes,
     ]
@@ -97,7 +82,7 @@ export function LivePixelAvatarCanvas({
       unsubscribers.forEach(unsubscribe => unsubscribe())
       if (frameRequest !== null) cancelAnimationFrame(frameRequest)
     }
-  }, [colors, scene, style])
+  }, [colors, look, scene, style])
 
   return <canvas ref={canvasRef} className={className} aria-hidden="true" />
 }

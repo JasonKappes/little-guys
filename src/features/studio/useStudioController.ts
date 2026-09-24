@@ -64,6 +64,29 @@ import {
   type BodyNode,
 } from '@/features/avatar/body'
 import {
+  createBodyLimb,
+  duplicateBodyLimb,
+  MAX_BODY_LIMBS,
+  type BodyLimb,
+  type BodyLimbPresetId,
+  type LimbPaint,
+} from '@/features/avatar/limbs'
+import {
+  createMarking,
+  duplicateMarking,
+  MAX_MARKINGS,
+  type Marking,
+  type MarkingPresetId,
+} from '@/features/avatar/markings'
+import {
+  randomPalette,
+  suggestPalette,
+  type AvatarPalette,
+  type AvatarShading,
+  type PaintRef,
+  type PaletteHarmony,
+} from '@/features/avatar/paint'
+import {
   scaleEye,
   updateEyeDimension,
   updateEyePosition,
@@ -75,6 +98,16 @@ import {
   type AvatarPose,
   type Expression,
 } from '@/features/avatar/geometry'
+import {
+  blendMouthAmount,
+  isHitMouth,
+  lerpMouthPose,
+  mouthPoseFromShape,
+  talkingMouthShape,
+  type MouthPose,
+  type MouthShape,
+  MOUTH_CLOSE_HIDE_MS,
+} from '@/features/avatar/mouth'
 import { defaultExpression } from '@/features/avatar/presets'
 import { type SurfaceConfig } from '@/features/avatar/surfaces'
 import {
@@ -104,13 +137,28 @@ import {
   paintRenderedOffset,
   paintRenderedScene,
 } from '@/features/rendering/renderedScene'
-import { paintPixelAvatar } from '@/features/rendering/pixelRenderer'
+import { paintPixelAvatar, readPixelFrame } from '@/features/rendering/pixelRenderer'
 import {
+  DEFAULT_SPEECH_REGION,
+  DEFAULT_TALK_LANGUAGE,
+  DEFAULT_TALK_SPEED,
+  DEFAULT_TALK_STYLE,
+  resolveTalkStyle,
+  synthesizeTalkLine,
+  talkLineMatches,
+  type SpeechLine,
+  type TalkLanguage,
+  type TalkSpeed,
+  type TalkStyle,
+} from '@/features/studio/azureSpeech'
+import {
+  BUNDLED_LOOK_VERSION,
   createStudioDocumentStore,
   loadStudioDocument,
   parseImportedStudioDocument,
   persistStudioDocument,
   serializeStudioDocument,
+  parseStageBackground,
   type StatePlaybackSelection,
   type StudioDocument,
 } from '@/features/studio/studioDocument'
@@ -118,7 +166,11 @@ import {
 export function useStudioController() {
   const { language, setLanguage, t } = useStudioLanguage()
   const [mode, setMode] = useState<Mode>('avatars')
-  const [initialDocument] = useState(loadStudioDocument)
+  const [initialDocument] = useState(() => {
+    const loaded = loadStudioDocument()
+    persistStudioDocument(loaded)
+    return loaded
+  })
   const [documentStore] = useState(() => createStudioDocumentStore(initialDocument))
   const initialLibrary = initialDocument.library
   const [avatars, setAvatars] = useState(initialLibrary.avatars)
@@ -133,7 +185,9 @@ export function useStudioController() {
   const initialBehavior = resolveAvatarBehavior(initialAvatar, baseBehavior)
   const [surface, setSurface] = useState(initialAvatar.body.primary)
   const [bodyNodes, setBodyNodes] = useState(initialAvatar.body.nodes)
+  const [limbs, setLimbs] = useState(initialAvatar.body.limbs ?? [])
   const [selectedBodyNodeId, setSelectedBodyNodeId] = useState<'primary' | string | null>('primary')
+  const [selectedLimbId, setSelectedLimbId] = useState<string | null>(null)
   const [selectedEyeSide, setSelectedEyeSide] = useState<-1 | 1 | null>(null)
   const [expressions, setExpressions] = useState(initialBehavior.expressions)
   const [sequences, setSequences] = useState(initialBehavior.sequences)
@@ -152,6 +206,12 @@ export function useStudioController() {
     documentStore.update({ library })
   const persistStatePlayback = (playback: StatePlaybackSelection) =>
     documentStore.update({ playback })
+  const [stageBackground, setStageBackground] = useState(initialDocument.stageBackground)
+  const updateStageBackground = (value: string) => {
+    const next = parseStageBackground(value)
+    setStageBackground(next)
+    documentStore.update({ stageBackground: next })
+  }
   const [bodyEditing, setBodyEditing] = useState(false)
   const modeRef = useRef(mode)
   useEffect(() => {
@@ -245,6 +305,7 @@ export function useStudioController() {
   const activeAvatarIdRef = useRef(activeAvatarId)
   const surfaceRef = useRef(surface)
   const bodyNodesRef = useRef(bodyNodes)
+  const limbsRef = useRef(limbs)
   const showWireRef = useRef(showWire)
   const highlightRef = useRef(highlight)
   const persistActiveBehavior = (
@@ -278,7 +339,7 @@ export function useStudioController() {
         poseWithAvatarEyes(initialExpression, initialAvatar.eyes),
         surface,
         1,
-        { bodyNodes }
+        { bodyNodes, limbs, markings: initialAvatar.markings }
       ),
     }
   })
@@ -323,6 +384,24 @@ export function useStudioController() {
   const blinkControls = useRef<ReturnType<typeof animate> | null>(null)
   const blinkAnimating = useRef(false)
   const blinkValue = useMotionValue(1)
+  const mouthPoseRef = useRef<MouthPose | null>(null)
+  const talkAudioRef = useRef<HTMLAudioElement | null>(null)
+  const talkRafRef = useRef<number | null>(null)
+  const talkHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const talkCacheRef = useRef<SpeechLine | null>(null)
+  const talkObjectUrlRef = useRef<string | null>(null)
+  const talkTokenRef = useRef(0)
+  const talkPressedUntilRef = useRef(0)
+  const talkMouthTimeRef = useRef<number | null>(null)
+  const talkMouthShapeRef = useRef<MouthShape | null>(null)
+  const [talkText, setTalkText] = useState('')
+  const [talkKey, setTalkKey] = useState('')
+  const [talkRegion, setTalkRegion] = useState(DEFAULT_SPEECH_REGION)
+  const [talkLanguage, setTalkLanguage] = useState<TalkLanguage>(DEFAULT_TALK_LANGUAGE)
+  const [talkSpeed, setTalkSpeed] = useState<TalkSpeed>(DEFAULT_TALK_SPEED)
+  const [talkStyle, setTalkStyle] = useState<TalkStyle>(DEFAULT_TALK_STYLE)
+  const [talkStatus, setTalkStatus] = useState<'idle' | 'generating' | 'ready' | 'talking'>('idle')
+  const [talkError, setTalkError] = useState<string | null>(null)
   const [renderedScene] = useState(() => createRenderedScene(initialGeometry))
   const [renderedRotationGizmo] = useState(() => createRenderedRotationGizmo(initialExpression))
   const bodyColorAnimation = useRef<ReturnType<typeof animate> | null>(null)
@@ -378,7 +457,10 @@ export function useStudioController() {
     const geometry = renderAvatar(renderPose, surfaceRef.current, blink ?? blinkValue.get(), {
       includeWire: showWireRef.current || highlightRef.current === 'head',
       bodyNodes: bodyNodesRef.current,
+      limbs: limbsRef.current,
+      markings: avatar?.markings,
       eyeOffset,
+      mouth: mouthPoseRef.current,
     })
     paintRenderedScene(renderedScene, geometry)
     paintRenderedOffset(
@@ -423,9 +505,177 @@ export function useStudioController() {
       eyeColorAnimation.current?.stop()
       if (stateTimer.current) clearTimeout(stateTimer.current)
       if (blinkTimer.current) clearTimeout(blinkTimer.current)
+      talkTokenRef.current += 1
+      if (talkRafRef.current !== null) cancelAnimationFrame(talkRafRef.current)
+      talkAudioRef.current?.pause()
+      if (talkObjectUrlRef.current) URL.revokeObjectURL(talkObjectUrlRef.current)
     },
     []
   )
+
+  const hideTalkMouth = () => {
+    talkPressedUntilRef.current = 0
+    talkMouthTimeRef.current = null
+    talkMouthShapeRef.current = null
+    if (mouthPoseRef.current === null) return
+    mouthPoseRef.current = null
+    paintPose(displayedPose.current)
+  }
+
+  const stopTalkPlayback = () => {
+    if (talkRafRef.current !== null) cancelAnimationFrame(talkRafRef.current)
+    talkRafRef.current = null
+    if (talkHideTimerRef.current !== null) clearTimeout(talkHideTimerRef.current)
+    talkHideTimerRef.current = null
+    const audio = talkAudioRef.current
+    if (audio) {
+      audio.onended = null
+      audio.pause()
+      audio.removeAttribute('src')
+    }
+    talkAudioRef.current = null
+    hideTalkMouth()
+  }
+
+  const stopTalk = () => {
+    talkTokenRef.current += 1
+    stopTalkPlayback()
+    setTalkStatus(talkCacheRef.current ? 'ready' : 'idle')
+  }
+
+  const markTalkStaleIfNeeded = (
+    text: string,
+    speed: TalkSpeed,
+    style: TalkStyle,
+    language: TalkLanguage
+  ) => {
+    if (
+      talkCacheRef.current &&
+      !talkLineMatches(talkCacheRef.current, text, speed, style, language) &&
+      talkStatus !== 'talking' &&
+      talkStatus !== 'generating'
+    ) {
+      setTalkStatus('idle')
+    }
+  }
+
+  const updateTalkText = (next: string) => {
+    setTalkText(next)
+    setTalkError(null)
+    markTalkStaleIfNeeded(next.trim(), talkSpeed, talkStyle, talkLanguage)
+  }
+
+  const updateTalkLanguage = (next: TalkLanguage) => {
+    const nextStyle = resolveTalkStyle(next, talkStyle)
+    setTalkLanguage(next)
+    setTalkStyle(nextStyle)
+    setTalkError(null)
+    markTalkStaleIfNeeded(talkText.trim(), talkSpeed, nextStyle, next)
+  }
+
+  const updateTalkSpeed = (next: TalkSpeed) => {
+    setTalkSpeed(next)
+    setTalkError(null)
+    markTalkStaleIfNeeded(talkText.trim(), next, talkStyle, talkLanguage)
+  }
+
+  const updateTalkStyle = (next: TalkStyle) => {
+    const resolved = resolveTalkStyle(talkLanguage, next)
+    setTalkStyle(resolved)
+    setTalkError(null)
+    markTalkStaleIfNeeded(talkText.trim(), talkSpeed, resolved, talkLanguage)
+  }
+
+  const playTalk = async () => {
+    const text = talkText.trim()
+    if (!text) {
+      setTalkError('missing-text')
+      return
+    }
+    talkTokenRef.current += 1
+    const token = talkTokenRef.current
+    stopTalkPlayback()
+    try {
+      let line = talkCacheRef.current
+      if (!line || !talkLineMatches(line, text, talkSpeed, talkStyle, talkLanguage)) {
+        setTalkStatus('generating')
+        setTalkError(null)
+        line = await synthesizeTalkLine(
+          talkKey,
+          talkRegion,
+          text,
+          talkSpeed,
+          talkStyle,
+          talkLanguage
+        )
+        if (token !== talkTokenRef.current) return
+        talkCacheRef.current = line
+      }
+      setTalkStatus('talking')
+      setTalkError(null)
+      if (talkObjectUrlRef.current) URL.revokeObjectURL(talkObjectUrlRef.current)
+      const url = URL.createObjectURL(line.audio)
+      talkObjectUrlRef.current = url
+      const audio = new Audio(url)
+      talkAudioRef.current = audio
+      const visemes = line.visemes
+      const applyMouth = (time: number) => {
+        const resolved = talkingMouthShape(visemes, time, talkPressedUntilRef.current)
+        talkPressedUntilRef.current = resolved.pressedUntil
+        const target = mouthPoseFromShape(resolved.shape)
+        const previousTime = talkMouthTimeRef.current
+        const previousShape = talkMouthShapeRef.current
+        talkMouthTimeRef.current = time
+        talkMouthShapeRef.current = resolved.shape
+        if (
+          !mouthPoseRef.current ||
+          previousShape === null ||
+          isHitMouth(resolved.shape) ||
+          isHitMouth(previousShape)
+        ) {
+          mouthPoseRef.current = target
+        } else {
+          const delta = previousTime === null ? 1 : Math.max(0, time - previousTime)
+          mouthPoseRef.current = lerpMouthPose(
+            mouthPoseRef.current,
+            target,
+            blendMouthAmount(delta)
+          )
+        }
+        paintPose(displayedPose.current)
+      }
+      const tick = () => {
+        if (token !== talkTokenRef.current) return
+        applyMouth(audio.currentTime)
+        talkRafRef.current = requestAnimationFrame(tick)
+      }
+      audio.onended = () => {
+        if (token !== talkTokenRef.current) return
+        if (talkRafRef.current !== null) cancelAnimationFrame(talkRafRef.current)
+        talkRafRef.current = null
+        talkAudioRef.current = null
+        mouthPoseRef.current = mouthPoseFromShape('closed')
+        talkMouthShapeRef.current = 'closed'
+        paintPose(displayedPose.current)
+        if (talkHideTimerRef.current !== null) clearTimeout(talkHideTimerRef.current)
+        talkHideTimerRef.current = setTimeout(() => {
+          if (token !== talkTokenRef.current) return
+          hideTalkMouth()
+          setTalkStatus('ready')
+        }, MOUTH_CLOSE_HIDE_MS)
+      }
+      await audio.play()
+      if (token !== talkTokenRef.current) return
+      applyMouth(0)
+      talkRafRef.current = requestAnimationFrame(tick)
+    } catch (error) {
+      if (token !== talkTokenRef.current) return
+      stopTalkPlayback()
+      setTalkStatus('idle')
+      const message = error instanceof Error ? error.message : 'synthesis-failed'
+      setTalkError(message)
+    }
+  }
 
   const stopTransition = (resetVelocity: boolean) => {
     if (transitionFrame.current !== null) cancelAnimationFrame(transitionFrame.current)
@@ -715,8 +965,21 @@ export function useStudioController() {
     }
   }
 
+  const currentBody = (primary = surfaceRef.current, nodes = bodyNodesRef.current) => ({
+    primary,
+    nodes,
+    limbs: limbsRef.current,
+  })
+
   const selectBodyNode = (id: 'primary' | string | null) => {
     setSelectedBodyNodeId(id)
+    setSelectedLimbId(null)
+    if (id) setSelectedEyeSide(null)
+  }
+
+  const selectLimb = (id: string | null) => {
+    setSelectedLimbId(id)
+    setSelectedBodyNodeId(null)
     if (id) setSelectedEyeSide(null)
   }
 
@@ -725,7 +988,7 @@ export function useStudioController() {
     setSurface(next)
     updateActiveAvatar(avatar => ({
       ...avatar,
-      body: { primary: next, nodes: bodyNodesRef.current },
+      body: currentBody(next),
     }))
     paintPose(displayedPose.current)
   }
@@ -735,7 +998,17 @@ export function useStudioController() {
     setBodyNodes(next)
     updateActiveAvatar(avatar => ({
       ...avatar,
-      body: { primary: surfaceRef.current, nodes: next },
+      body: currentBody(surfaceRef.current, next),
+    }))
+    paintPose(displayedPose.current)
+  }
+
+  const updateLimbs = (next: BodyLimb[]) => {
+    limbsRef.current = next
+    setLimbs(next)
+    updateActiveAvatar(avatar => ({
+      ...avatar,
+      body: currentBody(),
     }))
     paintPose(displayedPose.current)
   }
@@ -752,6 +1025,87 @@ export function useStudioController() {
     updateActiveAvatar(avatar => ({ ...avatar, renderStyle }))
   }
 
+  const updateAvatarPalette = (changes: Partial<AvatarPalette>) => {
+    updateActiveAvatar(avatar => ({ ...avatar, palette: { ...avatar.palette, ...changes } }))
+  }
+
+  const applyPaletteHarmony = (harmony: PaletteHarmony) => {
+    const avatar = avatarsRef.current.find(item => item.id === activeAvatarIdRef.current)
+    if (!avatar) return
+    updateAvatarPalette(suggestPalette(avatar.colors.body, harmony))
+  }
+
+  const randomizeAvatarPalette = () => {
+    const next = randomPalette(Math.floor(Math.random() * 1_000_000_000))
+    const avatar = avatarsRef.current.find(item => item.id === activeAvatarIdRef.current)
+    if (!avatar) return
+    const colors = { ...avatar.colors, body: next.body }
+    updateActiveAvatar(current => ({ ...current, colors, palette: next.palette }))
+    setDisplayColors(resolveColors(expression, colors))
+  }
+
+  const updateAvatarShading = (changes: Partial<AvatarShading>) => {
+    updateActiveAvatar(avatar => ({ ...avatar, shading: { ...avatar.shading, ...changes } }))
+  }
+
+  const [selectedMarkingId, setSelectedMarkingId] = useState<string | null>(null)
+
+  const updateMarkings = (update: (markings: Marking[]) => Marking[]) => {
+    updateActiveAvatar(avatar => ({ ...avatar, markings: update(avatar.markings) }))
+    paintPose(displayedPose.current)
+  }
+
+  const addMarking = (preset: MarkingPresetId) => {
+    const avatar = avatarsRef.current.find(item => item.id === activeAvatarIdRef.current)
+    if (!avatar || avatar.markings.length >= MAX_MARKINGS) return
+    const marking = createMarking(preset, avatar.markings)
+    updateMarkings(markings => [...markings, marking])
+    setSelectedMarkingId(marking.id)
+  }
+
+  const updateMarking = (next: Marking) => {
+    updateMarkings(markings => markings.map(item => (item.id === next.id ? next : item)))
+  }
+
+  const deleteMarking = (id: string) => {
+    updateMarkings(markings => markings.filter(item => item.id !== id))
+    setSelectedMarkingId(current => (current === id ? null : current))
+  }
+
+  const duplicateSelectedMarking = (id: string) => {
+    const avatar = avatarsRef.current.find(item => item.id === activeAvatarIdRef.current)
+    const source = avatar?.markings.find(item => item.id === id)
+    if (!avatar || !source || avatar.markings.length >= MAX_MARKINGS) return
+    const copy = duplicateMarking(source)
+    updateMarkings(markings => [...markings, copy])
+    setSelectedMarkingId(copy.id)
+  }
+
+  const moveMarking = (id: string, direction: -1 | 1) => {
+    updateMarkings(markings => {
+      const index = markings.findIndex(item => item.id === id)
+      const target = index + direction
+      if (index < 0 || target < 0 || target >= markings.length) return markings
+      const next = markings.slice()
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
+  const updateSelectedLimbPaint = (paint: LimbPaint) => {
+    const limb = limbsRef.current.find(item => item.id === selectedLimbId)
+    if (!limb) return
+    commitLimb({ ...limb, paint })
+  }
+
+  const updateSelectedBodyNodePaint = (paint: PaintRef) => {
+    updateSelectedBodyNode(node => {
+      const next: BodyNode = { ...node, paint }
+      if (paint === 'body') delete next.paint
+      return next
+    })
+  }
+
   const updateAvatarEyes = (changes: Partial<AvatarEyeDefaults>) => {
     const avatar = avatarsRef.current.find(item => item.id === activeAvatarIdRef.current)
     if (!avatar) return
@@ -763,6 +1117,7 @@ export function useStudioController() {
   const activateAvatar = (id: string, editBody = false, preserveMode = false) => {
     const avatar = avatarsRef.current.find(item => item.id === id)
     if (!avatar) return
+    stopTalk()
     const resumeActiveSequence = statePlaying
     if (resumeActiveSequence) pauseState(false)
     if (editBody) suspendStateForEditor()
@@ -780,9 +1135,11 @@ export function useStudioController() {
     activeAvatarIdRef.current = id
     surfaceRef.current = avatar.body.primary
     bodyNodesRef.current = avatar.body.nodes
+    limbsRef.current = avatar.body.limbs ?? []
     setActiveAvatarId(id)
     setSurface(avatar.body.primary)
     setBodyNodes(avatar.body.nodes)
+    setLimbs(avatar.body.limbs ?? [])
     expressionsRef.current = nextExpressions
     sequencesRef.current = nextSequences
     expressionDragPreview.current = nextExpressions
@@ -964,6 +1321,40 @@ export function useStudioController() {
     const duplicate = duplicateBodyNode(source)
     updateBodyNodes([...bodyNodesRef.current, duplicate])
     selectBodyNode(duplicate.id)
+  }
+
+  const addBodyLimb = (preset: BodyLimbPresetId) => {
+    if (limbsRef.current.length >= MAX_BODY_LIMBS) return
+    const limb = createBodyLimb(preset, limbsRef.current)
+    updateLimbs([...limbsRef.current, limb])
+    selectLimb(limb.id)
+  }
+
+  const commitLimb = (nextLimb: BodyLimb) => {
+    updateLimbs(limbsRef.current.map(limb => (limb.id === nextLimb.id ? nextLimb : limb)))
+  }
+
+  const previewSelectedLimb = (nextLimb: BodyLimb) => {
+    const next = limbsRef.current.map(limb => (limb.id === nextLimb.id ? nextLimb : limb))
+    limbsRef.current = next
+    setLimbs(next)
+    paintPose(displayedPose.current)
+  }
+
+  const deleteSelectedLimb = () => {
+    if (!selectedLimbId) return
+    updateLimbs(limbsRef.current.filter(limb => limb.id !== selectedLimbId))
+    selectLimb(null)
+    selectBodyNode('primary')
+  }
+
+  const duplicateSelectedLimb = () => {
+    if (!selectedLimbId || limbsRef.current.length >= MAX_BODY_LIMBS) return
+    const source = limbsRef.current.find(limb => limb.id === selectedLimbId)
+    if (!source) return
+    const duplicate = duplicateBodyLimb(source)
+    updateLimbs([...limbsRef.current, duplicate])
+    selectLimb(duplicate.id)
   }
 
   const updateHighlight = (next: Highlight) => {
@@ -1265,6 +1656,9 @@ export function useStudioController() {
           {
             includeWire: showWireRef.current || highlightRef.current === 'head',
             bodyNodes: bodyNodesRef.current,
+            limbs: limbsRef.current,
+            markings: avatarsRef.current.find(item => item.id === activeAvatarIdRef.current)
+              ?.markings,
           }
         )
       )
@@ -1461,6 +1855,7 @@ export function useStudioController() {
     selectedBodyNodeId === 'primary'
       ? null
       : (bodyNodes.find(node => node.id === selectedBodyNodeId) ?? null)
+  const selectedLimb = limbs.find(limb => limb.id === selectedLimbId) ?? null
 
   const updateNodeVector = (property: 'position' | 'rotation', index: 0 | 1 | 2, value: number) => {
     updateSelectedBodyNode(node => {
@@ -1508,6 +1903,8 @@ export function useStudioController() {
       stateId: playbackStatus === 'stopped' ? null : (activeState ?? (selectedState || null)),
       playing: statePlaying,
     },
+    stageBackground,
+    lookVersion: BUNDLED_LOOK_VERSION,
   })
   const downloadStudioProject = () => {
     const blob = new Blob([serializeStudioDocument(currentStudioDocument())], {
@@ -1528,7 +1925,9 @@ export function useStudioController() {
         colorFrom: snapshotColorFrom,
         colorTo: snapshotColorTo,
         size: Number(snapshotSize),
-      }
+      },
+      activeAvatar.renderStyle,
+      activeAvatar
     )
 
   const createPixelSnapshotCanvas = () => {
@@ -1570,25 +1969,7 @@ export function useStudioController() {
     if (!avatarContext) return null
     paintPixelAvatar(
       avatarContext,
-      {
-        headPath: renderedScene.headPath.get(),
-        backPaths: renderedScene.backPaths.flatMap(item => {
-          const value = item.get()
-          return value ? [value] : []
-        }),
-        frontPaths: renderedScene.frontPaths.flatMap(item => {
-          const value = item.get()
-          return value ? [value] : []
-        }),
-        leftPath: renderedScene.leftPath.get(),
-        rightPath: renderedScene.rightPath.get(),
-        leftOpacity: renderedScene.leftOpacity.get(),
-        rightOpacity: renderedScene.rightOpacity.get(),
-        offsetX: renderedScene.offsetX.get(),
-        offsetY: renderedScene.offsetY.get(),
-        bodyColor: renderedColors.body.get(),
-        eyeColor: renderedColors.eyes.get(),
-      },
+      readPixelFrame(renderedScene, renderedColors, activeAvatar),
       renderStyle
     )
     context.imageSmoothingEnabled = false
@@ -1646,7 +2027,7 @@ export function useStudioController() {
     setProjectImportError(null)
     if (file.size > 10_000_000) {
       setProjectImportError(
-        t('Ce fichier ne contient pas un projet Avatar Studio valide et compatible.')
+        t('Ce fichier ne contient pas un projet little guys valide et compatible.')
       )
       return
     }
@@ -1658,7 +2039,7 @@ export function useStudioController() {
       })
       .catch(() => {
         setProjectImportError(
-          t('Ce fichier ne contient pas un projet Avatar Studio valide et compatible.')
+          t('Ce fichier ne contient pas un projet little guys valide et compatible.')
         )
       })
   }
@@ -1752,6 +2133,7 @@ export function useStudioController() {
     activeSequence,
     activeSequenceLabel,
     activeState,
+    addBodyLimb,
     addBodyNode,
     animationsAffectedByExpressionDeletion,
     avatarDragOrigin,
@@ -1761,6 +2143,7 @@ export function useStudioController() {
     blink,
     bodyEditing,
     bodyNodes,
+    commitLimb,
     cancelAvatarEditing,
     cancelAvatarMove,
     cancelExpressionEditing,
@@ -1779,6 +2162,7 @@ export function useStudioController() {
     deleteEditing,
     deleteExpressionOpen,
     deleteSelectedBodyNode,
+    deleteSelectedLimb,
     deleteSequenceEditing,
     deleteSequenceOpen,
     downloadAvatarExport,
@@ -1792,6 +2176,7 @@ export function useStudioController() {
     duplicateAvatar,
     duplicateExpression,
     duplicateSelectedBodyNode,
+    duplicateSelectedLimb,
     duplicateSequenceEditing,
     duplicateState,
     editing,
@@ -1808,6 +2193,7 @@ export function useStudioController() {
     highlight,
     language,
     launchSequence,
+    limbs,
     linked,
     mode,
     openExpressionEditor,
@@ -1824,6 +2210,7 @@ export function useStudioController() {
     previewExpressionDraft,
     previewExpressionMove,
     previewSelectedBodyNode,
+    previewSelectedLimb,
     previewStateMove,
     projectImportError,
     projectImportRef,
@@ -1836,8 +2223,11 @@ export function useStudioController() {
     saveEditing,
     saveSequenceEditing,
     selectBodyNode,
+    selectLimb,
     selectedBodyNode,
     selectedBodyNodeId,
+    selectedLimb,
+    selectedLimbId,
     selectedExportAnimations,
     selectedEyeSide,
     selectedSequenceStepId,
@@ -1883,12 +2273,43 @@ export function useStudioController() {
     stopState,
     surface,
     t,
+    talkError,
+    talkKey,
+    talkLanguage,
+    talkRegion,
+    talkSpeed,
+    talkStatus,
+    talkStyle,
+    talkText,
+    playTalk,
+    setTalkKey,
+    setTalkRegion,
+    stopTalk,
+    updateTalkLanguage,
+    updateTalkSpeed,
+    updateTalkStyle,
+    updateTalkText,
     takePicture,
     toggleExportAnimation,
     toggleStatePlayback,
     transitionToExpression,
+    stageBackground,
+    updateStageBackground,
     updateAvatarColors,
     updateAvatarRenderStyle,
+    updateAvatarPalette,
+    applyPaletteHarmony,
+    randomizeAvatarPalette,
+    updateAvatarShading,
+    selectedMarkingId,
+    setSelectedMarkingId,
+    addMarking,
+    updateMarking,
+    deleteMarking,
+    duplicateSelectedMarking,
+    moveMarking,
+    updateSelectedLimbPaint,
+    updateSelectedBodyNodePaint,
     updateAvatarEyeDimension,
     updateAvatarEyePosition,
     updateAvatarEyeSize,

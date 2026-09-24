@@ -1,15 +1,14 @@
 {
-  "name": "bible-strong-avatar-lab",
+  "name": "little-guys",
   "version": "0.1.0",
   "description": "A browser-based studio for designing procedural 2D avatars, expressions and reusable animations.",
-  "author": "Stéphane Montlouis-Calixte",
-  "homepage": "https://avatars.bible-strong.app",
+  "homepage": "https://github.com/JasonKappes/little-guys",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/smontlouis/bible-strong-avatar-lab.git"
+    "url": "git+https://github.com/JasonKappes/little-guys.git"
   },
   "bugs": {
-    "url": "https://github.com/smontlouis/bible-strong-avatar-lab/issues"
+    "url": "https://github.com/JasonKappes/little-guys/issues"
   },
   "license": "AGPL-3.0-only",
   "private": true,
@@ -38,6 +37,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.31.0",
+    "microsoft-cognitiveservices-speech-sdk": "^1.51.0",
     "motion": "^13.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

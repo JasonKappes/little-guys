@@ -1,6 +1,6 @@
 import { translateStudioText } from '@/i18n'
 
-describe('avatar studio translations', () => {
+describe('little guys translations', () => {
   it('uses English for static interface copy', () => {
     expect(translateStudioText('Couleur des yeux', 'en')).toBe('Eye color')
   })
@@ -20,6 +20,14 @@ describe('avatar studio translations', () => {
     expect(translateStudioText('Couleur des yeux', 'zh-CN')).toBe('眼睛颜色')
     expect(translateStudioText('Modifier l’expression 08', 'zh-CN')).toBe('编辑表情 08')
     expect(translateStudioText('sleeping', 'zh-CN')).toBe('睡眠')
+  })
+
+  it('translates speech speed and tone controls', () => {
+    expect(translateStudioText('Vitesse', 'en')).toBe('Speed')
+    expect(translateStudioText('Espagnol', 'en')).toBe('Spanish')
+    expect(translateStudioText('Ton', 'en')).toBe('Tone')
+    expect(translateStudioText('Chuchoté', 'zh-CN')).toBe('耳语')
+    expect(translateStudioText('Posé', 'fr')).toBe('Posé')
   })
 
   it('translates every Photo Mode control to Simplified Chinese', () => {

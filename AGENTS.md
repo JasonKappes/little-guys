@@ -2,7 +2,7 @@
 
 ## Project
 
-Bible Strong Avatar Lab is a standalone React 19 + Vite 8 application for procedural SVG avatars.
+little guys is a standalone React 19 + Vite 8 application for procedural SVG avatars.
 Read `CONTEXT.md` before changing behavior or persistence semantics.
 
 ## Commands

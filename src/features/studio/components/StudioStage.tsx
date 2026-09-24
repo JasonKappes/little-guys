@@ -1,16 +1,31 @@
 import { Camera, Info } from 'lucide-react'
-import { motion } from 'motion/react'
-import { type CSSProperties, useState } from 'react'
+import { motion, useMotionValue } from 'motion/react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 import { AvatarCanvas } from '@/features/rendering/components/AvatarCanvas'
+import { hexLuminance } from '@/features/rendering/vectorMaterials'
+import { nextStageZoom, STAGE_ZOOM_DEFAULT } from '@/features/rendering/stageZoom'
 import { StudioIdentity } from '@/features/studio/components/StudioIdentity'
 import type { StudioController } from '@/features/studio/useStudioController'
 
 export function StudioStage({ controller }: { controller: StudioController }) {
   const [photoHelpOpen, setPhotoHelpOpen] = useState(false)
+  const stageRef = useRef<HTMLElement>(null)
+  const stageZoom = useMotionValue(STAGE_ZOOM_DEFAULT)
+
+  useEffect(() => {
+    const node = stageRef.current
+    if (!node) return
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      stageZoom.set(nextStageZoom(stageZoom.get(), event.deltaY, event.deltaMode))
+    }
+    node.addEventListener('wheel', onWheel, { passive: false })
+    return () => node.removeEventListener('wheel', onWheel)
+  }, [stageZoom])
   const {
     activeAvatar,
     activeAvatarEyes,
@@ -30,18 +45,25 @@ export function StudioStage({ controller }: { controller: StudioController }) {
     previewCanvasExpression,
     previewExpressionDraft,
     previewSelectedBodyNode,
+    previewSelectedLimb,
     renderedColors,
     renderedRotationGizmo,
     renderedScene,
+    commitLimb,
+    limbs,
     selectBodyNode,
+    selectLimb,
     selectedBodyNode,
     selectedBodyNodeId,
+    selectedLimb,
+    selectedLimbId,
     selectedEyeSide,
     setEditing,
     setSelectedEyeSide,
     showWire,
     surface,
     t,
+    stageBackground,
     takePicture,
     transitionToExpression,
     updateHighlight,
@@ -49,11 +71,14 @@ export function StudioStage({ controller }: { controller: StudioController }) {
   } = controller
   return (
     <motion.section
+      ref={stageRef}
       className="stage-column"
+      data-stage-tone={hexLuminance(stageBackground) > 0.48 ? 'light' : 'dark'}
       style={
         {
           '--avatar-body-color': renderedColors.body,
           '--avatar-eye-color': renderedColors.eyes,
+          '--stage-background': stageBackground,
         } as CSSProperties
       }
     >
@@ -70,11 +95,15 @@ export function StudioStage({ controller }: { controller: StudioController }) {
         scene={renderedScene}
         colors={renderedColors}
         renderStyle={activeAvatar.renderStyle}
+        look={activeAvatar}
         rotationGizmo={renderedRotationGizmo}
         showWire={showWire}
         bodyEditing={bodyEditing}
         selectedBodyNodeId={selectedBodyNodeId}
         selectedBodyNode={selectedBodyNode}
+        selectedLimbId={selectedLimbId}
+        selectedLimb={selectedLimb}
+        limbs={limbs}
         selectedSide={selectedEyeSide}
         linked={linked}
         highlight={highlight}
@@ -82,6 +111,9 @@ export function StudioStage({ controller }: { controller: StudioController }) {
         onBodyNodeSelect={selectBodyNode}
         onBodyNodePreview={previewSelectedBodyNode}
         onBodyNodeChange={commitBodyNode}
+        onLimbSelect={selectLimb}
+        onLimbPreview={previewSelectedLimb}
+        onLimbChange={commitLimb}
         onEyeSelect={setSelectedEyeSide}
         onPreview={previewCanvasExpression}
         onChange={editing ? previewExpressionDraft : updateImmediate}
@@ -100,6 +132,7 @@ export function StudioStage({ controller }: { controller: StudioController }) {
             : null
         }
         onManipulationStart={freezeLivePreviewForManipulation}
+        stageZoom={stageZoom}
       />
       {photoFlash > 0 && (
         <motion.div
@@ -150,13 +183,6 @@ export function StudioStage({ controller }: { controller: StudioController }) {
           </Tooltip>
         </div>
       </TooltipProvider>
-      <p className="stage-credit">
-        Made with ❤️ by{' '}
-        <a href="https://x.com/_smontlouis" target="_blank" rel="noreferrer">
-          @_smontlouis
-        </a>
-        .
-      </p>
     </motion.section>
   )
 }

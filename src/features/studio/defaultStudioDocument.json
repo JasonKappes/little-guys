@@ -32,7 +32,444 @@
           "positionYRight": -7,
           "leftAngle": 0,
           "rightAngle": 0
-        }
+        },
+        "palette": {
+          "accent": "#ffd166",
+          "accent2": "#e8f0ff"
+        },
+        "shading": {
+          "amount": 30,
+          "size": 16,
+          "angle": 135,
+          "highlight": 30,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-strobi-belly",
+            "name": "Tache du ventre",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 44,
+            "width": 78,
+            "height": 66,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-strobi-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "strobek",
+        "name": "Strobek",
+        "body": {
+          "primary": {
+            "type": "sphere",
+            "width": 288,
+            "height": 288,
+            "depth": 288.0441,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-strobek-tail",
+              "name": "Queue",
+              "kind": "tail",
+              "handles": [
+                {
+                  "id": "h-strobek-tail-0",
+                  "point": [
+                    0,
+                    81.6,
+                    -12
+                  ],
+                  "radius": 48
+                },
+                {
+                  "id": "h-strobek-tail-1",
+                  "point": [
+                    12,
+                    158.4,
+                    -26.4
+                  ],
+                  "radius": 32
+                },
+                {
+                  "id": "h-strobek-tail-2",
+                  "point": [
+                    26.4,
+                    189.6,
+                    -9.6
+                  ],
+                  "radius": 20
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent2",
+                "tipLength": 0.25,
+                "rings": "accent2",
+                "ringCount": 2
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#4a6ed4",
+          "eyes": "#111316"
+        },
+        "eyes": {
+          "widthLeft": 24,
+          "widthRight": 24,
+          "heightLeft": 60,
+          "heightRight": 60,
+          "spacing": 42,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -8.4,
+          "positionYRight": -8.4,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ffd166",
+          "accent2": "#e3ecff"
+        },
+        "shading": {
+          "amount": 40,
+          "size": 16,
+          "angle": 135,
+          "highlight": 30,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-strobek-belly",
+            "name": "Tache du ventre",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 44,
+            "width": 84,
+            "height": 70,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-strobek-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#9fc2ff",
+            "opacity": 0.6,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-strobek-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "strobar",
+        "name": "Strobar",
+        "body": {
+          "primary": {
+            "type": "sphere",
+            "width": 348,
+            "height": 348,
+            "depth": 348.0532,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-strobar-tail",
+              "name": "Queue",
+              "kind": "tail",
+              "handles": [
+                {
+                  "id": "h-strobar-tail-0",
+                  "point": [
+                    0,
+                    95.7,
+                    -17.4
+                  ],
+                  "radius": 40
+                },
+                {
+                  "id": "h-strobar-tail-1",
+                  "point": [
+                    17.4,
+                    200.1,
+                    -60.9
+                  ],
+                  "radius": 22
+                },
+                {
+                  "id": "h-strobar-tail-2",
+                  "point": [
+                    40.6,
+                    287.1,
+                    -78.3
+                  ],
+                  "radius": 13
+                },
+                {
+                  "id": "h-strobar-tail-3",
+                  "point": [
+                    84.1,
+                    345.1,
+                    -40.6
+                  ],
+                  "radius": 8
+                },
+                {
+                  "id": "h-strobar-tail-4",
+                  "point": [
+                    124.7,
+                    359.6,
+                    8.7
+                  ],
+                  "radius": 5
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent",
+                "tipLength": 0.2,
+                "rings": "accent2",
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-strobar-horn-l",
+              "name": "Corne",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-strobar-horn-l-0",
+                  "point": [
+                    -40.6,
+                    -92.8,
+                    23.2
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-strobar-horn-l-1",
+                  "point": [
+                    -55.1,
+                    -185.6,
+                    40.6
+                  ],
+                  "radius": 9
+                },
+                {
+                  "id": "h-strobar-horn-l-2",
+                  "point": [
+                    -52.2,
+                    -243.6,
+                    31.9
+                  ],
+                  "radius": 5
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent",
+                "tipLength": 0.45,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-strobar-horn-r",
+              "name": "Corne 2",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-strobar-horn-r-0",
+                  "point": [
+                    40.6,
+                    -92.8,
+                    23.2
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-strobar-horn-r-1",
+                  "point": [
+                    55.1,
+                    -185.6,
+                    40.6
+                  ],
+                  "radius": 9
+                },
+                {
+                  "id": "h-strobar-horn-r-2",
+                  "point": [
+                    52.2,
+                    -243.6,
+                    31.9
+                  ],
+                  "radius": 5
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent",
+                "tipLength": 0.45,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#3558c2",
+          "eyes": "#111316"
+        },
+        "eyes": {
+          "widthLeft": 29,
+          "widthRight": 29,
+          "heightLeft": 72.5,
+          "heightRight": 72.5,
+          "spacing": 50.75,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -10.15,
+          "positionYRight": -10.15,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ffc53d",
+          "accent2": "#e0eaff"
+        },
+        "shading": {
+          "amount": 55,
+          "size": 20,
+          "angle": 135,
+          "highlight": 35,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-strobar-shell",
+            "name": "Dessus bicolore",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#1f3a8a",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -90,
+            "width": 118,
+            "height": 118,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-strobar-belly",
+            "name": "Tache du ventre",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 44,
+            "width": 88,
+            "height": 74,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-strobar-gem",
+            "name": "Gemme",
+            "kind": "decal",
+            "shape": "diamond",
+            "paint": "accent",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -36,
+            "width": 16,
+            "height": 24,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-strobar-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
       },
       {
         "id": "avatar-4fe2d1bd-cf46-4e5e-a62d-d6b60be519ed",
@@ -645,7 +1082,385 @@
           "positionYRight": -7,
           "leftAngle": 0,
           "rightAngle": 0
-        }
+        },
+        "palette": {
+          "accent": "#ffb13b",
+          "accent2": "#ffe7b3"
+        },
+        "shading": {
+          "amount": 30,
+          "size": 16,
+          "angle": 135,
+          "highlight": 25,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-cubee-belly",
+            "name": "Tache du ventre",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 44,
+            "width": 70,
+            "height": 58,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-cubee-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "cuborn",
+        "name": "Cuborn",
+        "body": {
+          "primary": {
+            "type": "cube",
+            "width": 229.7991,
+            "height": 229.7991,
+            "depth": 206.3502,
+            "roundness": 0.73265625
+          },
+          "nodes": [
+            {
+              "id": "node-cuborn-nub-l",
+              "name": "Cube 1",
+              "surface": {
+                "type": "cube",
+                "width": 50.4,
+                "height": 50.4,
+                "depth": 43.2,
+                "roundness": 0.55
+              },
+              "position": [
+                -93.6,
+                -93.6,
+                9.6
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "paint": "accent"
+            },
+            {
+              "id": "node-cuborn-nub-r",
+              "name": "Cube 2",
+              "surface": {
+                "type": "cube",
+                "width": 50.4,
+                "height": 50.4,
+                "depth": 43.2,
+                "roundness": 0.55
+              },
+              "position": [
+                93.6,
+                -93.6,
+                9.6
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "paint": "accent"
+            }
+          ],
+          "limbs": []
+        },
+        "colors": {
+          "body": "#d44848",
+          "eyes": "#111316"
+        },
+        "eyes": {
+          "widthLeft": 23.9705,
+          "widthRight": 33.6108,
+          "heightLeft": 35.9808,
+          "heightRight": 44.3841,
+          "spacing": 20.1745,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -8.4,
+          "positionYRight": -8.4,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ff9d2e",
+          "accent2": "#ffe2a8"
+        },
+        "shading": {
+          "amount": 45,
+          "size": 16,
+          "angle": 135,
+          "highlight": 25,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-cuborn-belly",
+            "name": "Tache du ventre",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 44,
+            "width": 76,
+            "height": 62,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-cuborn-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffcf5a",
+            "opacity": 0.7,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-cuborn-flame",
+            "name": "Étoile",
+            "kind": "decal",
+            "shape": "star",
+            "paint": "accent",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -40,
+            "width": 22,
+            "height": 22,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "cuboss",
+        "name": "Cuboss",
+        "body": {
+          "primary": {
+            "type": "cube",
+            "width": 277.6739,
+            "height": 277.6739,
+            "depth": 249.3398,
+            "roundness": 0.73265625
+          },
+          "nodes": [
+            {
+              "id": "node-cuboss-ear-l",
+              "name": "Oreille",
+              "surface": {
+                "type": "cube",
+                "width": 81.2,
+                "height": 104.4,
+                "depth": 58,
+                "roundness": 0.62
+              },
+              "position": [
+                -133.4,
+                -139.2,
+                8.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "paint": "accent"
+            },
+            {
+              "id": "node-cuboss-ear-r",
+              "name": "Oreille 2",
+              "surface": {
+                "type": "cube",
+                "width": 81.2,
+                "height": 104.4,
+                "depth": 58,
+                "roundness": 0.62
+              },
+              "position": [
+                133.4,
+                -139.2,
+                8.7
+              ],
+              "rotation": [
+                0,
+                0,
+                0
+              ],
+              "paint": "accent"
+            }
+          ],
+          "limbs": [
+            {
+              "id": "limb-cuboss-belly",
+              "name": "Ventre",
+              "kind": "belly",
+              "handles": [
+                {
+                  "id": "h-cuboss-belly-0",
+                  "point": [
+                    0,
+                    84.1,
+                    31.9
+                  ],
+                  "radius": 48
+                },
+                {
+                  "id": "h-cuboss-belly-1",
+                  "point": [
+                    0,
+                    162.4,
+                    66.7
+                  ],
+                  "radius": 32
+                },
+                {
+                  "id": "h-cuboss-belly-2",
+                  "point": [
+                    0,
+                    200.1,
+                    55.1
+                  ],
+                  "radius": 18
+                }
+              ]
+            }
+          ]
+        },
+        "colors": {
+          "body": "#c23030",
+          "eyes": "#111316"
+        },
+        "eyes": {
+          "widthLeft": 28.9643,
+          "widthRight": 40.613,
+          "heightLeft": 43.4768,
+          "heightRight": 53.6307,
+          "spacing": 24.3776,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -10.15,
+          "positionYRight": -10.15,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ff8a1f",
+          "accent2": "#ffd98f"
+        },
+        "shading": {
+          "amount": 60,
+          "size": 22,
+          "angle": 135,
+          "highlight": 30,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-cuboss-stripes",
+            "name": "Rayures",
+            "kind": "stripes",
+            "shape": "ellipse",
+            "paint": "#6d1414",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -90,
+            "width": 120,
+            "height": 9,
+            "rotation": 0,
+            "mirror": false,
+            "count": 3,
+            "seed": 7
+          },
+          {
+            "id": "marking-cuboss-mask",
+            "name": "Masque",
+            "kind": "decal",
+            "shape": "square",
+            "paint": "#7a1a1a",
+            "opacity": 0.85,
+            "yaw": 0,
+            "pitch": -6,
+            "width": 104,
+            "height": 28,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-cuboss-gem",
+            "name": "Gemme",
+            "kind": "decal",
+            "shape": "diamond",
+            "paint": "accent",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -40,
+            "width": 18,
+            "height": 26,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-cuboss-belly",
+            "name": "Tache du ventre",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 44,
+            "width": 80,
+            "height": 64,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
       },
       {
         "id": "avatar-4b9ea0c1-286f-4aa1-b053-61fcc416ba7e",
@@ -679,7 +1494,1907 @@
           "positionYRight": 18.613671875,
           "leftAngle": 6.980078125,
           "rightAngle": -7.012890625000001
-        }
+        },
+        "palette": {
+          "accent": "#7fd6ff",
+          "accent2": "#ffffff"
+        },
+        "shading": {
+          "amount": 25,
+          "size": 16,
+          "angle": 135,
+          "highlight": 40,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-onee-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ff9ec7",
+            "opacity": 0.55,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-onee-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "onex",
+        "name": "Onex",
+        "body": {
+          "primary": {
+            "type": "cone",
+            "width": 300,
+            "height": 218.408,
+            "depth": 270,
+            "roundness": 0,
+            "morphRoundness": 1.2003515624999999,
+            "tipRoundness": 2,
+            "baseRoundness": 2
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-onex-tail",
+              "name": "Queue",
+              "kind": "tail",
+              "handles": [
+                {
+                  "id": "h-onex-tail-0",
+                  "point": [
+                    0,
+                    -74.4,
+                    4.8
+                  ],
+                  "radius": 28
+                },
+                {
+                  "id": "h-onex-tail-1",
+                  "point": [
+                    7.2,
+                    -141.6,
+                    -9.6
+                  ],
+                  "radius": 16
+                },
+                {
+                  "id": "h-onex-tail-2",
+                  "point": [
+                    12,
+                    -177.6,
+                    -4.8
+                  ],
+                  "radius": 10
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent",
+                "tipLength": 0.35,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#c5d0ee",
+          "eyes": "#111316"
+        },
+        "eyes": {
+          "widthLeft": 16.0669,
+          "widthRight": 22.9247,
+          "heightLeft": 52.8136,
+          "heightRight": 44.6386,
+          "spacing": 25.6959,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": 22.3364,
+          "positionYRight": 22.3364,
+          "leftAngle": 6.980078125,
+          "rightAngle": -7.012890625000001
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#6bcbff",
+          "accent2": "#ffffff"
+        },
+        "shading": {
+          "amount": 35,
+          "size": 16,
+          "angle": 135,
+          "highlight": 40,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-onex-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ff9ec7",
+            "opacity": 0.55,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-onex-moon",
+            "name": "Lune",
+            "kind": "decal",
+            "shape": "crescent",
+            "paint": "accent",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -36,
+            "width": 26,
+            "height": 26,
+            "rotation": -20,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-onex-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "onara",
+        "name": "Onara",
+        "body": {
+          "primary": {
+            "type": "cone",
+            "width": 362.5,
+            "height": 263.9096,
+            "depth": 326.25,
+            "roundness": 0,
+            "morphRoundness": 1.2003515624999999,
+            "tipRoundness": 2,
+            "baseRoundness": 2
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-onara-tail",
+              "name": "Queue",
+              "kind": "tail",
+              "handles": [
+                {
+                  "id": "h-onara-tail-0",
+                  "point": [
+                    0,
+                    -92.8,
+                    2.9
+                  ],
+                  "radius": 30
+                },
+                {
+                  "id": "h-onara-tail-1",
+                  "point": [
+                    11.6,
+                    -185.6,
+                    -17.4
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-onara-tail-2",
+                  "point": [
+                    20.3,
+                    -255.2,
+                    -11.6
+                  ],
+                  "radius": 12
+                },
+                {
+                  "id": "h-onara-tail-3",
+                  "point": [
+                    31.9,
+                    -310.3,
+                    5.8
+                  ],
+                  "radius": 7
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent",
+                "tipLength": 0.3,
+                "rings": "accent2",
+                "ringCount": 2
+              }
+            },
+            {
+              "id": "limb-onara-fin-l",
+              "name": "Oreille",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-onara-fin-l-0",
+                  "point": [
+                    -69.6,
+                    -11.6,
+                    14.5
+                  ],
+                  "radius": 22
+                },
+                {
+                  "id": "h-onara-fin-l-1",
+                  "point": [
+                    -127.6,
+                    -34.8,
+                    5.8
+                  ],
+                  "radius": 14
+                },
+                {
+                  "id": "h-onara-fin-l-2",
+                  "point": [
+                    -156.6,
+                    -26.1,
+                    -2.9
+                  ],
+                  "radius": 8
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent",
+                "tipLength": 0.4,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-onara-fin-r",
+              "name": "Oreille 2",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-onara-fin-r-0",
+                  "point": [
+                    69.6,
+                    -11.6,
+                    14.5
+                  ],
+                  "radius": 22
+                },
+                {
+                  "id": "h-onara-fin-r-1",
+                  "point": [
+                    127.6,
+                    -34.8,
+                    5.8
+                  ],
+                  "radius": 14
+                },
+                {
+                  "id": "h-onara-fin-r-2",
+                  "point": [
+                    156.6,
+                    -26.1,
+                    -2.9
+                  ],
+                  "radius": 8
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent",
+                "tipLength": 0.4,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#9eb0de",
+          "eyes": "#111316"
+        },
+        "eyes": {
+          "widthLeft": 19.4141,
+          "widthRight": 27.7007,
+          "heightLeft": 63.8164,
+          "heightRight": 53.9383,
+          "spacing": 31.0493,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": 26.9898,
+          "positionYRight": 26.9898,
+          "leftAngle": 6.980078125,
+          "rightAngle": -7.012890625000001
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#4fb8ff",
+          "accent2": "#f3f8ff"
+        },
+        "shading": {
+          "amount": 45,
+          "size": 18,
+          "angle": 135,
+          "highlight": 45,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-onara-frost",
+            "name": "Dessous bicolore",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 90,
+            "width": 110,
+            "height": 110,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-onara-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ff9ec7",
+            "opacity": 0.5,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-onara-moon",
+            "name": "Lune",
+            "kind": "decal",
+            "shape": "crescent",
+            "paint": "accent",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -38,
+            "width": 30,
+            "height": 30,
+            "rotation": -20,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-onara-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "zappi",
+        "name": "Zappi",
+        "body": {
+          "primary": {
+            "type": "sphere",
+            "width": 226,
+            "height": 214,
+            "depth": 214,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-zappi-ear-l",
+              "name": "Oreille",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-zappi-ear-l-0",
+                  "point": [
+                    -48,
+                    -78,
+                    8
+                  ],
+                  "radius": 24
+                },
+                {
+                  "id": "h-zappi-ear-l-1",
+                  "point": [
+                    -72,
+                    -150,
+                    2
+                  ],
+                  "radius": 15
+                },
+                {
+                  "id": "h-zappi-ear-l-2",
+                  "point": [
+                    -82,
+                    -210,
+                    -4
+                  ],
+                  "radius": 6
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#2a2320",
+                "tipLength": 0.38,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-zappi-ear-r",
+              "name": "Oreille 2",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-zappi-ear-r-0",
+                  "point": [
+                    48,
+                    -78,
+                    8
+                  ],
+                  "radius": 24
+                },
+                {
+                  "id": "h-zappi-ear-r-1",
+                  "point": [
+                    72,
+                    -150,
+                    2
+                  ],
+                  "radius": 15
+                },
+                {
+                  "id": "h-zappi-ear-r-2",
+                  "point": [
+                    82,
+                    -210,
+                    -4
+                  ],
+                  "radius": 6
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#2a2320",
+                "tipLength": 0.38,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-zappi-tail",
+              "name": "Queue",
+              "kind": "tail",
+              "handles": [
+                {
+                  "id": "h-zappi-tail-0",
+                  "point": [
+                    26,
+                    62,
+                    -62
+                  ],
+                  "radius": 15
+                },
+                {
+                  "id": "h-zappi-tail-1",
+                  "point": [
+                    96,
+                    26,
+                    -70
+                  ],
+                  "radius": 13
+                },
+                {
+                  "id": "h-zappi-tail-2",
+                  "point": [
+                    70,
+                    -30,
+                    -62
+                  ],
+                  "radius": 16
+                },
+                {
+                  "id": "h-zappi-tail-3",
+                  "point": [
+                    142,
+                    -82,
+                    -52
+                  ],
+                  "radius": 24
+                },
+                {
+                  "id": "h-zappi-tail-4",
+                  "point": [
+                    124,
+                    -150,
+                    -42
+                  ],
+                  "radius": 12
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": null,
+                "tipLength": 0.3,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#ffd23f",
+          "eyes": "#1b1714"
+        },
+        "eyes": {
+          "widthLeft": 20,
+          "widthRight": 20,
+          "heightLeft": 44,
+          "heightRight": 44,
+          "spacing": 44,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -6,
+          "positionYRight": -6,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ff5a4f",
+          "accent2": "#fff3c4"
+        },
+        "shading": {
+          "amount": 35,
+          "size": 16,
+          "angle": 135,
+          "highlight": 30,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-zappi-cheeks",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent",
+            "opacity": 0.92,
+            "yaw": 40,
+            "pitch": 18,
+            "width": 24,
+            "height": 20,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-zappi-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "zapplin",
+        "name": "Zapplin",
+        "body": {
+          "primary": {
+            "type": "sphere",
+            "width": 272,
+            "height": 258,
+            "depth": 258,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-zapplin-ear-l",
+              "name": "Oreille",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-zapplin-ear-l-0",
+                  "point": [
+                    -57.599999999999994,
+                    -93.6,
+                    9.6
+                  ],
+                  "radius": 28.799999999999997
+                },
+                {
+                  "id": "h-zapplin-ear-l-1",
+                  "point": [
+                    -86.39999999999999,
+                    -180,
+                    2.4
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-zapplin-ear-l-2",
+                  "point": [
+                    -98.39999999999999,
+                    -252,
+                    -4.8
+                  ],
+                  "radius": 7.199999999999999
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#2a2320",
+                "tipLength": 0.38,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-zapplin-ear-r",
+              "name": "Oreille 2",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-zapplin-ear-r-0",
+                  "point": [
+                    57.599999999999994,
+                    -93.6,
+                    9.6
+                  ],
+                  "radius": 28.799999999999997
+                },
+                {
+                  "id": "h-zapplin-ear-r-1",
+                  "point": [
+                    86.39999999999999,
+                    -180,
+                    2.4
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-zapplin-ear-r-2",
+                  "point": [
+                    98.39999999999999,
+                    -252,
+                    -4.8
+                  ],
+                  "radius": 7.199999999999999
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#2a2320",
+                "tipLength": 0.38,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-zapplin-tail",
+              "name": "Queue",
+              "kind": "tail",
+              "handles": [
+                {
+                  "id": "h-zapplin-tail-0",
+                  "point": [
+                    31.2,
+                    74.39999999999999,
+                    -74.39999999999999
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-zapplin-tail-1",
+                  "point": [
+                    115.19999999999999,
+                    31.2,
+                    -84
+                  ],
+                  "radius": 15.6
+                },
+                {
+                  "id": "h-zapplin-tail-2",
+                  "point": [
+                    84,
+                    -36,
+                    -74.39999999999999
+                  ],
+                  "radius": 19.2
+                },
+                {
+                  "id": "h-zapplin-tail-3",
+                  "point": [
+                    170.4,
+                    -98.39999999999999,
+                    -62.4
+                  ],
+                  "radius": 28.799999999999997
+                },
+                {
+                  "id": "h-zapplin-tail-4",
+                  "point": [
+                    148.79999999999998,
+                    -180,
+                    -50.4
+                  ],
+                  "radius": 14.399999999999999
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent2",
+                "tipLength": 0.22,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#ffc928",
+          "eyes": "#1b1714"
+        },
+        "eyes": {
+          "widthLeft": 24,
+          "widthRight": 24,
+          "heightLeft": 52.8,
+          "heightRight": 52.8,
+          "spacing": 52.8,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -7.199999999999999,
+          "positionYRight": -7.199999999999999,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ff5a4f",
+          "accent2": "#fff3c4"
+        },
+        "shading": {
+          "amount": 45,
+          "size": 18,
+          "angle": 135,
+          "highlight": 30,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-zapplin-back",
+            "name": "Rayures",
+            "kind": "stripes",
+            "shape": "ellipse",
+            "paint": "#9c5b2e",
+            "opacity": 1,
+            "yaw": 180,
+            "pitch": -30,
+            "width": 80,
+            "height": 11,
+            "rotation": 0,
+            "mirror": false,
+            "count": 2,
+            "seed": 7
+          },
+          {
+            "id": "marking-zapplin-belly",
+            "name": "Dessous bicolore",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 90,
+            "width": 100,
+            "height": 100,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-zapplin-cheeks",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent",
+            "opacity": 0.92,
+            "yaw": 40,
+            "pitch": 18,
+            "width": 26,
+            "height": 22,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-zapplin-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "zapperon",
+        "name": "Zapperon",
+        "body": {
+          "primary": {
+            "type": "capsule",
+            "width": 318,
+            "height": 356,
+            "depth": 300,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-zapperon-ear-l",
+              "name": "Oreille",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-zapperon-ear-l-0",
+                  "point": [
+                    -69.6,
+                    -113.1,
+                    11.6
+                  ],
+                  "radius": 34.8
+                },
+                {
+                  "id": "h-zapperon-ear-l-1",
+                  "point": [
+                    -104.39999999999999,
+                    -217.5,
+                    2.9
+                  ],
+                  "radius": 21.75
+                },
+                {
+                  "id": "h-zapperon-ear-l-2",
+                  "point": [
+                    -118.89999999999999,
+                    -304.5,
+                    -5.8
+                  ],
+                  "radius": 8.7
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#2a2320",
+                "tipLength": 0.38,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-zapperon-ear-r",
+              "name": "Oreille 2",
+              "kind": "ear",
+              "handles": [
+                {
+                  "id": "h-zapperon-ear-r-0",
+                  "point": [
+                    69.6,
+                    -113.1,
+                    11.6
+                  ],
+                  "radius": 34.8
+                },
+                {
+                  "id": "h-zapperon-ear-r-1",
+                  "point": [
+                    104.39999999999999,
+                    -217.5,
+                    2.9
+                  ],
+                  "radius": 21.75
+                },
+                {
+                  "id": "h-zapperon-ear-r-2",
+                  "point": [
+                    118.89999999999999,
+                    -304.5,
+                    -5.8
+                  ],
+                  "radius": 8.7
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#2a2320",
+                "tipLength": 0.38,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-zapperon-tail",
+              "name": "Queue",
+              "kind": "tail",
+              "handles": [
+                {
+                  "id": "h-zapperon-tail-0",
+                  "point": [
+                    37.699999999999996,
+                    89.89999999999999,
+                    -89.89999999999999
+                  ],
+                  "radius": 21.75
+                },
+                {
+                  "id": "h-zapperon-tail-1",
+                  "point": [
+                    139.2,
+                    37.699999999999996,
+                    -101.5
+                  ],
+                  "radius": 18.849999999999998
+                },
+                {
+                  "id": "h-zapperon-tail-2",
+                  "point": [
+                    101.5,
+                    -43.5,
+                    -89.89999999999999
+                  ],
+                  "radius": 23.2
+                },
+                {
+                  "id": "h-zapperon-tail-3",
+                  "point": [
+                    205.9,
+                    -118.89999999999999,
+                    -75.39999999999999
+                  ],
+                  "radius": 34.8
+                },
+                {
+                  "id": "h-zapperon-tail-4",
+                  "point": [
+                    179.79999999999998,
+                    -217.5,
+                    -60.9
+                  ],
+                  "radius": 17.4
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#58e1ff",
+                "tipLength": 0.22,
+                "rings": "#9c5b2e",
+                "ringCount": 2
+              }
+            },
+            {
+              "id": "limb-zapperon-antenna-l",
+              "name": "Corne",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-zapperon-antenna-l-0",
+                  "point": [
+                    -34,
+                    -160,
+                    26
+                  ],
+                  "radius": 12
+                },
+                {
+                  "id": "h-zapperon-antenna-l-1",
+                  "point": [
+                    -60,
+                    -238,
+                    34
+                  ],
+                  "radius": 7
+                },
+                {
+                  "id": "h-zapperon-antenna-l-2",
+                  "point": [
+                    -44,
+                    -290,
+                    28
+                  ],
+                  "radius": 4
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#58e1ff",
+                "tipLength": 0.35,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-zapperon-antenna-r",
+              "name": "Corne 2",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-zapperon-antenna-r-0",
+                  "point": [
+                    34,
+                    -160,
+                    26
+                  ],
+                  "radius": 12
+                },
+                {
+                  "id": "h-zapperon-antenna-r-1",
+                  "point": [
+                    60,
+                    -238,
+                    34
+                  ],
+                  "radius": 7
+                },
+                {
+                  "id": "h-zapperon-antenna-r-2",
+                  "point": [
+                    44,
+                    -290,
+                    28
+                  ],
+                  "radius": 4
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "#58e1ff",
+                "tipLength": 0.35,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#ffbf1f",
+          "eyes": "#1b1714"
+        },
+        "eyes": {
+          "widthLeft": 29,
+          "widthRight": 29,
+          "heightLeft": 63.8,
+          "heightRight": 63.8,
+          "spacing": 63.8,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -8.7,
+          "positionYRight": -8.7,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "borderlands",
+          "width": 12,
+          "wobble": 6,
+          "color": "#1a140c"
+        },
+        "palette": {
+          "accent": "#ff4d3d",
+          "accent2": "#fff0b8"
+        },
+        "shading": {
+          "amount": 55,
+          "size": 22,
+          "angle": 135,
+          "highlight": 35,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-zapperon-back",
+            "name": "Rayures",
+            "kind": "stripes",
+            "shape": "ellipse",
+            "paint": "#9c5b2e",
+            "opacity": 1,
+            "yaw": 180,
+            "pitch": -20,
+            "width": 110,
+            "height": 12,
+            "rotation": 0,
+            "mirror": false,
+            "count": 3,
+            "seed": 7
+          },
+          {
+            "id": "marking-zapperon-belly",
+            "name": "Dessous bicolore",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent2",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 90,
+            "width": 104,
+            "height": 104,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-zapperon-cheeks",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent",
+            "opacity": 0.92,
+            "yaw": 40,
+            "pitch": 18,
+            "width": 26,
+            "height": 22,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-zapperon-bolt",
+            "name": "Gemme",
+            "kind": "decal",
+            "shape": "diamond",
+            "paint": "#58e1ff",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -34,
+            "width": 14,
+            "height": 30,
+            "rotation": 18,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "budi",
+        "name": "Budi",
+        "body": {
+          "primary": {
+            "type": "sphere",
+            "width": 222,
+            "height": 206,
+            "depth": 214,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-budi-leaf",
+              "name": "Pousse",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-budi-leaf-0",
+                  "point": [
+                    10,
+                    -96,
+                    12
+                  ],
+                  "radius": 14
+                },
+                {
+                  "id": "h-budi-leaf-1",
+                  "point": [
+                    30,
+                    -150,
+                    16
+                  ],
+                  "radius": 13
+                },
+                {
+                  "id": "h-budi-leaf-2",
+                  "point": [
+                    58,
+                    -176,
+                    8
+                  ],
+                  "radius": 4
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent2",
+                "tipLength": 0.45,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#6cc36b",
+          "eyes": "#132016"
+        },
+        "eyes": {
+          "widthLeft": 21,
+          "widthRight": 21,
+          "heightLeft": 46,
+          "heightRight": 46,
+          "spacing": 42,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -4,
+          "positionYRight": -4,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ff8fbf",
+          "accent2": "#c9f29b"
+        },
+        "shading": {
+          "amount": 30,
+          "size": 16,
+          "angle": 135,
+          "highlight": 30,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-budi-spots",
+            "name": "Taches",
+            "kind": "spots",
+            "shape": "ellipse",
+            "paint": "#2f7a45",
+            "opacity": 1,
+            "yaw": 68,
+            "pitch": -18,
+            "width": 80,
+            "height": 84,
+            "rotation": 0,
+            "mirror": true,
+            "count": 5,
+            "seed": 11
+          },
+          {
+            "id": "marking-budi-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent",
+            "opacity": 0.45,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-budi-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "budwick",
+        "name": "Budwick",
+        "body": {
+          "primary": {
+            "type": "sphere",
+            "width": 266,
+            "height": 248,
+            "depth": 256,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-budwick-leaf-l",
+              "name": "Pousse",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-budwick-leaf-l-0",
+                  "point": [
+                    -12.5,
+                    -120,
+                    15
+                  ],
+                  "radius": 17.5
+                },
+                {
+                  "id": "h-budwick-leaf-l-1",
+                  "point": [
+                    -37.5,
+                    -187.5,
+                    20
+                  ],
+                  "radius": 16.25
+                },
+                {
+                  "id": "h-budwick-leaf-l-2",
+                  "point": [
+                    -72.5,
+                    -220,
+                    10
+                  ],
+                  "radius": 5
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent2",
+                "tipLength": 0.45,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-budwick-leaf-r",
+              "name": "Pousse 2",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-budwick-leaf-r-0",
+                  "point": [
+                    12.5,
+                    -120,
+                    15
+                  ],
+                  "radius": 17.5
+                },
+                {
+                  "id": "h-budwick-leaf-r-1",
+                  "point": [
+                    37.5,
+                    -187.5,
+                    20
+                  ],
+                  "radius": 16.25
+                },
+                {
+                  "id": "h-budwick-leaf-r-2",
+                  "point": [
+                    72.5,
+                    -220,
+                    10
+                  ],
+                  "radius": 5
+                }
+              ],
+              "paint": {
+                "base": "body",
+                "tip": "accent2",
+                "tipLength": 0.45,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#56b25a",
+          "eyes": "#132016"
+        },
+        "eyes": {
+          "widthLeft": 24,
+          "widthRight": 24,
+          "heightLeft": 54,
+          "heightRight": 54,
+          "spacing": 50,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": -4,
+          "positionYRight": -4,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ff7eb6",
+          "accent2": "#c6f08f"
+        },
+        "shading": {
+          "amount": 42,
+          "size": 18,
+          "angle": 135,
+          "highlight": 30,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-budwick-spots",
+            "name": "Taches",
+            "kind": "spots",
+            "shape": "ellipse",
+            "paint": "#2f7a45",
+            "opacity": 1,
+            "yaw": 68,
+            "pitch": -18,
+            "width": 80,
+            "height": 84,
+            "rotation": 0,
+            "mirror": true,
+            "count": 7,
+            "seed": 23
+          },
+          {
+            "id": "marking-budwick-belly",
+            "name": "Dessous bicolore",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#e8f7c8",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 90,
+            "width": 100,
+            "height": 100,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-budwick-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent",
+            "opacity": 0.45,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-budwick-shine",
+            "name": "Reflet",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#ffffff",
+            "opacity": 0.7,
+            "yaw": -30,
+            "pitch": -34,
+            "width": 16,
+            "height": 10,
+            "rotation": -32,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          }
+        ]
+      },
+      {
+        "id": "bloomarch",
+        "name": "Bloomarch",
+        "body": {
+          "primary": {
+            "type": "sphere",
+            "width": 318,
+            "height": 296,
+            "depth": 306,
+            "roundness": 1
+          },
+          "nodes": [],
+          "limbs": [
+            {
+              "id": "limb-bloomarch-petal-0",
+              "name": "Corne",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-bloomarch-petal-0-0",
+                  "point": [
+                    -21,
+                    -128,
+                    10
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-bloomarch-petal-0-1",
+                  "point": [
+                    -83,
+                    -157,
+                    4
+                  ],
+                  "radius": 26
+                },
+                {
+                  "id": "h-bloomarch-petal-0-2",
+                  "point": [
+                    -120,
+                    -174,
+                    -4
+                  ],
+                  "radius": 8
+                }
+              ],
+              "paint": {
+                "base": "accent",
+                "tip": "accent2",
+                "tipLength": 0.4,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-bloomarch-petal-1",
+              "name": "Corne",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-bloomarch-petal-1-0",
+                  "point": [
+                    -12,
+                    -135,
+                    10
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-bloomarch-petal-1-1",
+                  "point": [
+                    -48,
+                    -186,
+                    4
+                  ],
+                  "radius": 26
+                },
+                {
+                  "id": "h-bloomarch-petal-1-2",
+                  "point": [
+                    -69,
+                    -215,
+                    -4
+                  ],
+                  "radius": 8
+                }
+              ],
+              "paint": {
+                "base": "accent",
+                "tip": "accent2",
+                "tipLength": 0.4,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-bloomarch-petal-2",
+              "name": "Corne",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-bloomarch-petal-2-0",
+                  "point": [
+                    0,
+                    -138,
+                    10
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-bloomarch-petal-2-1",
+                  "point": [
+                    0,
+                    -196,
+                    4
+                  ],
+                  "radius": 26
+                },
+                {
+                  "id": "h-bloomarch-petal-2-2",
+                  "point": [
+                    0,
+                    -230,
+                    -4
+                  ],
+                  "radius": 8
+                }
+              ],
+              "paint": {
+                "base": "accent",
+                "tip": "accent2",
+                "tipLength": 0.4,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-bloomarch-petal-3",
+              "name": "Corne",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-bloomarch-petal-3-0",
+                  "point": [
+                    12,
+                    -135,
+                    10
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-bloomarch-petal-3-1",
+                  "point": [
+                    48,
+                    -186,
+                    4
+                  ],
+                  "radius": 26
+                },
+                {
+                  "id": "h-bloomarch-petal-3-2",
+                  "point": [
+                    69,
+                    -215,
+                    -4
+                  ],
+                  "radius": 8
+                }
+              ],
+              "paint": {
+                "base": "accent",
+                "tip": "accent2",
+                "tipLength": 0.4,
+                "rings": null,
+                "ringCount": 3
+              }
+            },
+            {
+              "id": "limb-bloomarch-petal-4",
+              "name": "Corne",
+              "kind": "horn",
+              "handles": [
+                {
+                  "id": "h-bloomarch-petal-4-0",
+                  "point": [
+                    21,
+                    -128,
+                    10
+                  ],
+                  "radius": 18
+                },
+                {
+                  "id": "h-bloomarch-petal-4-1",
+                  "point": [
+                    83,
+                    -157,
+                    4
+                  ],
+                  "radius": 26
+                },
+                {
+                  "id": "h-bloomarch-petal-4-2",
+                  "point": [
+                    120,
+                    -174,
+                    -4
+                  ],
+                  "radius": 8
+                }
+              ],
+              "paint": {
+                "base": "accent",
+                "tip": "accent2",
+                "tipLength": 0.4,
+                "rings": null,
+                "ringCount": 3
+              }
+            }
+          ]
+        },
+        "colors": {
+          "body": "#3fa14d",
+          "eyes": "#132016"
+        },
+        "eyes": {
+          "widthLeft": 28,
+          "widthRight": 28,
+          "heightLeft": 64,
+          "heightRight": 64,
+          "spacing": 58,
+          "positionXLeft": 0,
+          "positionXRight": 0,
+          "positionYLeft": 0,
+          "positionYRight": 0,
+          "leftAngle": 0,
+          "rightAngle": 0
+        },
+        "renderStyle": {
+          "type": "vector"
+        },
+        "palette": {
+          "accent": "#ff6aa8",
+          "accent2": "#ffd1e6"
+        },
+        "shading": {
+          "amount": 55,
+          "size": 22,
+          "angle": 135,
+          "highlight": 35,
+          "color": "#1d1b3f"
+        },
+        "markings": [
+          {
+            "id": "marking-bloomarch-spots",
+            "name": "Taches",
+            "kind": "spots",
+            "shape": "ellipse",
+            "paint": "#2f7a45",
+            "opacity": 1,
+            "yaw": 68,
+            "pitch": -18,
+            "width": 80,
+            "height": 84,
+            "rotation": 0,
+            "mirror": true,
+            "count": 9,
+            "seed": 37
+          },
+          {
+            "id": "marking-bloomarch-belly",
+            "name": "Dessous bicolore",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "#e4f5c4",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": 90,
+            "width": 106,
+            "height": 106,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-bloomarch-star",
+            "name": "Étoile",
+            "kind": "decal",
+            "shape": "star",
+            "paint": "#ffe066",
+            "opacity": 1,
+            "yaw": 0,
+            "pitch": -36,
+            "width": 26,
+            "height": 26,
+            "rotation": 0,
+            "mirror": false,
+            "count": 1,
+            "seed": 7
+          },
+          {
+            "id": "marking-bloomarch-blush",
+            "name": "Joues",
+            "kind": "decal",
+            "shape": "ellipse",
+            "paint": "accent",
+            "opacity": 0.4,
+            "yaw": 36,
+            "pitch": 16,
+            "width": 20,
+            "height": 13,
+            "rotation": 0,
+            "mirror": true,
+            "count": 1,
+            "seed": 7
+          }
+        ]
       }
     ]
   },

@@ -40,8 +40,63 @@ describe('avatar export', () => {
     const source = generateJavaScriptAvatarModule(pixelPayload)
 
     expect(pixelPayload.avatar.renderStyle).toEqual({ type: 'pixel', resolution: 72 })
-    expect(source).toContain('paintPixelGeometry')
+    expect(source).toContain('AvatarProceduralEngine.paintPixelAvatar')
     expect(source).toContain('Math.max(8, Math.min(192')
+  })
+
+  it('carries the palette, cartoon shading and markings into standalone exports', () => {
+    const painted = createAvatarExportPayload(
+      {
+        ...avatar,
+        palette: { accent: '#f5a623', accent2: '#fff1d6' },
+        shading: { amount: 60, size: 14, angle: 135, highlight: 30, color: '#1d1b3f' },
+        markings: [
+          {
+            id: 'marking-belly',
+            name: 'Tache du ventre',
+            kind: 'decal',
+            shape: 'ellipse',
+            paint: 'accent2',
+            opacity: 1,
+            yaw: 0,
+            pitch: 44,
+            width: 78,
+            height: 66,
+            rotation: 0,
+            mirror: false,
+            count: 1,
+            seed: 3,
+          },
+        ],
+      },
+      initialExpressions,
+      animations
+    )
+    const source = generateJavaScriptAvatarModule(painted)
+
+    expect(painted.avatar.palette.accent).toBe('#f5a623')
+    expect(painted.avatar.markings).toHaveLength(1)
+    expect(source).toContain('syncSvgPaintOps')
+    expect(source).toContain('syncSvgShadeLayers')
+    expect(source).toContain('"marking-belly"')
+    expect(() => parse(source, { sourceType: 'module' })).not.toThrow()
+  })
+
+  it('preserves outline, soft shade and glow rendering in standalone exports', () => {
+    const outlinePayload = createAvatarExportPayload(
+      { ...avatar, renderStyle: { type: 'outline', width: 11 } },
+      initialExpressions,
+      animations
+    )
+    const source = generateJavaScriptAvatarModule(outlinePayload)
+
+    expect(outlinePayload.avatar.renderStyle).toEqual({ type: 'outline', width: 11 })
+    expect(source).toContain('resolveExportMaterial')
+    expect(source).toContain('softShade')
+    expect(source).toContain('feGaussianBlur')
+    expect(source).toContain('feDisplacementMap')
+    expect(source).toContain('paintOrder')
+    expect(source).toContain('borderlands')
   })
 
   it('generates a standalone JavaScript module without a Web Component', () => {

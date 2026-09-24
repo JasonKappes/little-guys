@@ -1,4 +1,13 @@
 import { parseAvatarBody, type AvatarBody } from './body'
+import { parseMarkings, type Marking } from './markings'
+import {
+  defaultAvatarShading,
+  derivePalette,
+  parseAvatarPalette,
+  parseAvatarShading,
+  type AvatarPalette,
+  type AvatarShading,
+} from './paint'
 import { defaultExpression, initialExpressions } from './presets'
 import { surfacePresets } from './surfaces'
 import type { Expression } from './geometry'
@@ -8,6 +17,22 @@ import {
   parseSequences,
   type AvatarSequence,
 } from '../animation/sequences'
+import {
+  borderlandsWidthRange,
+  borderlandsWobbleRange,
+  defaultBorderlandsRenderStyle,
+  defaultGlowRenderStyle,
+  defaultOutlineRenderStyle,
+  defaultSoftShadeRenderStyle,
+  glowSizeRange,
+  outlineWidthRange,
+  parseInkColor,
+  softShadeStrengthRange,
+  type BorderlandsRenderStyle,
+  type GlowRenderStyle,
+  type OutlineRenderStyle,
+  type SoftShadeRenderStyle,
+} from '../rendering/vectorMaterials'
 
 export type AvatarBehaviorLibrary = {
   expressions: Expression[]
@@ -21,15 +46,33 @@ export type StudioAvatar = {
   colors: AvatarColors
   eyes: AvatarEyeDefaults
   renderStyle: AvatarRenderStyle
+  palette: AvatarPalette
+  shading: AvatarShading
+  markings: Marking[]
   behavior?: AvatarBehaviorLibrary
 }
+
+export type AvatarLook = Pick<StudioAvatar, 'palette' | 'shading' | 'markings'>
+
+export const avatarLook = (avatar: StudioAvatar): AvatarLook => ({
+  palette: avatar.palette,
+  shading: avatar.shading,
+  markings: avatar.markings,
+})
 
 export type AvatarColors = { body: string; eyes: string }
 export type PixelRenderStyle = {
   type: 'pixel'
   resolution: number
 }
-export type AvatarRenderStyle = { type: 'vector' } | PixelRenderStyle
+export type AvatarRenderStyle =
+  | { type: 'vector' }
+  | PixelRenderStyle
+  | OutlineRenderStyle
+  | SoftShadeRenderStyle
+  | GlowRenderStyle
+  | BorderlandsRenderStyle
+export type AvatarRenderStyleType = AvatarRenderStyle['type']
 export type AvatarEyeDefaults = Pick<
   Expression,
   | 'widthLeft'
@@ -49,6 +92,12 @@ export const defaultAvatarRenderStyle: AvatarRenderStyle = { type: 'vector' }
 export const defaultPixelRenderStyle: PixelRenderStyle = {
   type: 'pixel',
   resolution: 64,
+}
+export {
+  defaultBorderlandsRenderStyle,
+  defaultGlowRenderStyle,
+  defaultOutlineRenderStyle,
+  defaultSoftShadeRenderStyle,
 }
 export const defaultAvatarEyes: AvatarEyeDefaults = {
   widthLeft: defaultExpression.widthLeft,
@@ -83,15 +132,77 @@ const finiteBounded = (value: unknown, fallback: number, min: number, max: numbe
     ? Math.min(max, Math.max(min, value))
     : fallback
 
+export const createAvatarRenderStyle = (type: AvatarRenderStyleType): AvatarRenderStyle => {
+  if (type === 'pixel') return { ...defaultPixelRenderStyle }
+  if (type === 'outline') return { ...defaultOutlineRenderStyle }
+  if (type === 'softShade') return { ...defaultSoftShadeRenderStyle }
+  if (type === 'glow') return { ...defaultGlowRenderStyle }
+  if (type === 'borderlands') return { ...defaultBorderlandsRenderStyle }
+  return { ...defaultAvatarRenderStyle }
+}
+
 export const parseAvatarRenderStyle = (value: unknown): AvatarRenderStyle => {
-  const candidate = value as Partial<PixelRenderStyle> | null
-  if (candidate?.type !== 'pixel') return { ...defaultAvatarRenderStyle }
-  return {
-    type: 'pixel',
-    resolution: Math.round(
-      finiteBounded(candidate.resolution, defaultPixelRenderStyle.resolution, 8, 192)
-    ),
+  const candidate = value as Partial<AvatarRenderStyle> | null
+  if (candidate?.type === 'pixel') {
+    return {
+      type: 'pixel',
+      resolution: Math.round(
+        finiteBounded(candidate.resolution, defaultPixelRenderStyle.resolution, 8, 192)
+      ),
+    }
   }
+  if (candidate?.type === 'outline') {
+    return {
+      type: 'outline',
+      width: finiteBounded(
+        candidate.width,
+        defaultOutlineRenderStyle.width,
+        outlineWidthRange.min,
+        outlineWidthRange.max
+      ),
+    }
+  }
+  if (candidate?.type === 'softShade') {
+    return {
+      type: 'softShade',
+      strength: finiteBounded(
+        candidate.strength,
+        defaultSoftShadeRenderStyle.strength,
+        softShadeStrengthRange.min,
+        softShadeStrengthRange.max
+      ),
+    }
+  }
+  if (candidate?.type === 'glow') {
+    return {
+      type: 'glow',
+      size: finiteBounded(
+        candidate.size,
+        defaultGlowRenderStyle.size,
+        glowSizeRange.min,
+        glowSizeRange.max
+      ),
+    }
+  }
+  if (candidate?.type === 'borderlands') {
+    return {
+      type: 'borderlands',
+      width: finiteBounded(
+        candidate.width,
+        defaultBorderlandsRenderStyle.width,
+        borderlandsWidthRange.min,
+        borderlandsWidthRange.max
+      ),
+      wobble: finiteBounded(
+        candidate.wobble,
+        defaultBorderlandsRenderStyle.wobble,
+        borderlandsWobbleRange.min,
+        borderlandsWobbleRange.max
+      ),
+      color: parseInkColor(candidate.color),
+    }
+  }
+  return { ...defaultAvatarRenderStyle }
 }
 
 const eyeDefaultFields = Object.keys(defaultAvatarEyes) as (keyof AvatarEyeDefaults)[]
@@ -124,6 +235,54 @@ export type AvatarLibrary = {
   activeAvatarId: string
   avatars: StudioAvatar[]
 }
+
+const withBundledPartPaint = (local: AvatarBody, bundled: AvatarBody): AvatarBody => {
+  const nodePaint = new Map(bundled.nodes.map(node => [node.id, node.paint]))
+  const limbPaint = new Map(bundled.limbs.map(limb => [limb.id, limb.paint]))
+  return {
+    ...local,
+    nodes: local.nodes.map(node => {
+      const paint = nodePaint.get(node.id)
+      return paint ? { ...node, paint } : node
+    }),
+    limbs: local.limbs.map(limb => {
+      const paint = limbPaint.get(limb.id)
+      return paint ? { ...limb, paint } : limb
+    }),
+  }
+}
+
+export const adoptBundledLook = (local: StudioAvatar, bundled: StudioAvatar): StudioAvatar => ({
+  ...local,
+  body: withBundledPartPaint(local.body, bundled.body),
+  palette: bundled.palette,
+  shading: bundled.shading,
+  markings: bundled.markings,
+})
+
+export const mergeBundledAvatars = (
+  local: StudioAvatar[],
+  bundled: StudioAvatar[],
+  lookUpgradeIds: ReadonlySet<string> = new Set()
+): StudioAvatar[] => {
+  const localById = new Map(local.map(avatar => [avatar.id, avatar]))
+  const bundledIds = new Set(bundled.map(avatar => avatar.id))
+  return [
+    ...bundled.map(avatar => {
+      const stored = localById.get(avatar.id)
+      if (!stored) return avatar
+      return lookUpgradeIds.has(avatar.id) ? adoptBundledLook(stored, avatar) : stored
+    }),
+    ...local.filter(avatar => !bundledIds.has(avatar.id)),
+  ]
+}
+
+export const hasCustomLook = (avatar: StudioAvatar) =>
+  avatar.markings.length > 0 ||
+  avatar.body.nodes.some(node => node.paint) ||
+  avatar.body.limbs.some(limb => limb.paint) ||
+  avatar.shading.amount > 0 ||
+  avatar.shading.highlight > 0
 
 const cloneExpressions = (expressions: Expression[]) => expressions.map(item => ({ ...item }))
 export const parseExpressions = (value: unknown): Expression[] => {
@@ -198,10 +357,13 @@ const parseAvatarBehavior = (
 export const createAvatar = (name: string): StudioAvatar => ({
   id: `avatar-${crypto.randomUUID()}`,
   name: name.trim() || 'Nouvel avatar',
-  body: { primary: { ...surfacePresets.sphere }, nodes: [] },
+  body: { primary: { ...surfacePresets.sphere }, nodes: [], limbs: [] },
   colors: { ...defaultAvatarColors },
   eyes: { ...defaultAvatarEyes },
   renderStyle: { ...defaultAvatarRenderStyle },
+  palette: derivePalette(defaultAvatarColors.body),
+  shading: { ...defaultAvatarShading },
+  markings: [],
 })
 
 export const parseAvatarLibrary = (
@@ -223,13 +385,17 @@ export const parseAvatarLibrary = (
       })
       .map(avatar => {
         const behavior = parseAvatarBehavior(avatar.behavior, baseBehavior)
+        const colors = parseColors(avatar.colors)
         return {
           id: avatar.id,
           name: avatar.name,
           body: parseAvatarBody(avatar.body, surfacePresets.sphere),
-          colors: parseColors(avatar.colors),
+          colors,
           eyes: parseAvatarEyeDefaults(avatar.eyes),
           renderStyle: parseAvatarRenderStyle(avatar.renderStyle),
+          palette: parseAvatarPalette(avatar.palette, colors.body),
+          shading: parseAvatarShading(avatar.shading),
+          markings: parseMarkings(avatar.markings),
           ...(behavior ? { behavior } : {}),
         }
       })

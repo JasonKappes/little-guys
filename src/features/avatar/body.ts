@@ -1,3 +1,5 @@
+import { parseBodyLimbs, type BodyLimb } from './limbs'
+import { parseOptionalPaintRef, type PaintRef } from './paint'
 import { surfaceLabels, surfacePresets, type SurfaceConfig, type SurfaceType } from './surfaces'
 
 export type BodyVector = readonly [number, number, number]
@@ -8,11 +10,13 @@ export type BodyNode = {
   surface: SurfaceConfig
   position: BodyVector
   rotation: BodyVector
+  paint?: PaintRef
 }
 
 export type AvatarBody = {
   primary: SurfaceConfig
   nodes: BodyNode[]
+  limbs: BodyLimb[]
 }
 
 export const bodyPrimitiveTypes = [
@@ -50,7 +54,7 @@ export const parseSurfaceConfig = (value: unknown, fallback: SurfaceConfig): Sur
 }
 
 export const parseAvatarBody = (value: unknown, fallbackPrimary: SurfaceConfig): AvatarBody => {
-  if (!value || typeof value !== 'object') return { primary: fallbackPrimary, nodes: [] }
+  if (!value || typeof value !== 'object') return { primary: fallbackPrimary, nodes: [], limbs: [] }
   const candidate = value as Partial<AvatarBody>
   const primary = parseSurfaceConfig(candidate.primary, fallbackPrimary)
   const seenIds = new Set<string>()
@@ -78,12 +82,16 @@ export const parseAvatarBody = (value: unknown, fallbackPrimary: SurfaceConfig):
           return valid
         })
         .slice(0, MAX_BODY_NODES)
-        .map(node => ({
-          ...node,
-          surface: parseSurfaceConfig(node.surface, surfacePresets[node.surface.type]),
-        }))
+        .map(({ paint, ...node }) => {
+          const parsedPaint = parseOptionalPaintRef(paint)
+          return {
+            ...node,
+            surface: parseSurfaceConfig(node.surface, surfacePresets[node.surface.type]),
+            ...(parsedPaint && parsedPaint !== 'body' ? { paint: parsedPaint } : {}),
+          }
+        })
     : []
-  return { primary, nodes }
+  return { primary, nodes, limbs: parseBodyLimbs(candidate.limbs) }
 }
 
 export const createBodyNode = (

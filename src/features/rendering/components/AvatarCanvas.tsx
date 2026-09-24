@@ -1,5 +1,5 @@
 import { RotateCcw } from 'lucide-react'
-import { motion } from 'motion/react'
+import { motion, type MotionValue } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
@@ -19,11 +19,15 @@ import {
   type AvatarRenderStyle,
 } from '@/features/avatar/avatars'
 import { type BodyNode } from '@/features/avatar/body'
+import { moveLimbHandle, setLimbHandleRadius, type BodyLimb } from '@/features/avatar/limbs'
 import { scaleEye, updateEyeDimension } from '@/features/avatar/expressionEditing'
 import {
+  insertLimbHandleAtScreen,
   poseFromExpression,
+  projectWorldPoint,
   renderBodyNodeEditor,
   renderEyeEditor,
+  renderLimbEditor,
   rotateBodyNodeAroundLocalAxis,
   rotateExpressionAroundAxis,
   rotateExpressionAroundCamera,
@@ -31,6 +35,7 @@ import {
   rotationRing,
   translateBodyNodeAlongLocalAxis,
   translateBodyNodeInCameraPlane,
+  translatePointInCameraPlane,
   type AvatarPose,
   type Expression,
   type Point3,
@@ -45,12 +50,17 @@ import {
 import { type SurfaceConfig } from '@/features/avatar/surfaces'
 import { type CanvasPreviewTarget } from '@/features/rendering/canvasPreview'
 import { LivePixelAvatarCanvas } from '@/features/rendering/components/PixelAvatarCanvas'
-import { type RenderedRotationGizmo } from '@/features/rendering/renderedRotationGizmo'
 import {
-  findBodyNodePath,
-  type RenderedColors,
-  type RenderedScene,
-} from '@/features/rendering/renderedScene'
+  AvatarGlowUnderlay,
+  AvatarInkMarks,
+  AvatarPaintOverlay,
+  AvatarShadeLayers,
+  AvatarStyleDefs,
+  useVectorPathPaint,
+} from '@/features/rendering/components/VectorAvatarGraphic'
+import { type PaintLook } from '@/features/rendering/paintPlan'
+import { type RenderedRotationGizmo } from '@/features/rendering/renderedRotationGizmo'
+import { type RenderedColors, type RenderedScene } from '@/features/rendering/renderedScene'
 
 export function RotationGizmo({
   expression,
@@ -476,6 +486,161 @@ export function BodyNodeGizmo({
   )
 }
 
+function LimbEditor({
+  svgRef,
+  pose,
+  limb,
+  onPreview,
+  onCommit,
+}: {
+  svgRef: React.RefObject<SVGSVGElement | null>
+  pose: AvatarPose
+  limb: BodyLimb
+  onPreview: (next: BodyLimb) => void
+  onCommit: (next: BodyLimb) => void
+}) {
+  const geometry = renderLimbEditor(pose, limb)
+  const drag = useRef<
+    | {
+        mode: 'move'
+        handleId: string
+        startPoint: readonly [number, number]
+        limb: BodyLimb
+      }
+    | {
+        mode: 'radius'
+        handleId: string
+        startDistance: number
+        startRadius: number
+        limb: BodyLimb
+      }
+    | undefined
+  >(undefined)
+  const latest = useRef(limb)
+  const manipulation = useRef<ManipulationSession<BodyLimb> | null>(null)
+  const previewFrame = useRef<number | undefined>(undefined)
+  const toSvg = (event: React.PointerEvent<SVGElement>): readonly [number, number] => {
+    const rectangle = svgRef.current!.getBoundingClientRect()
+    return [
+      ((event.clientX - rectangle.left) / rectangle.width) * 300 - 150,
+      ((event.clientY - rectangle.top) / rectangle.height) * 300 - 150,
+    ]
+  }
+  const startMove = (handleId: string, event: React.PointerEvent<SVGElement>) => {
+    event.stopPropagation()
+    drag.current = { mode: 'move', handleId, startPoint: toSvg(event), limb }
+    latest.current = limb
+    manipulation.current = beginManipulation(limb)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  const startRadius = (handleId: string, center: Point3, event: React.PointerEvent<SVGElement>) => {
+    event.stopPropagation()
+    const point = toSvg(event)
+    const handle = limb.handles.find(item => item.id === handleId)
+    if (!handle) return
+    drag.current = {
+      mode: 'radius',
+      handleId,
+      startDistance: Math.max(6, Math.hypot(point[0] - center[0], point[1] - center[1])),
+      startRadius: handle.radius,
+      limb,
+    }
+    latest.current = limb
+    manipulation.current = beginManipulation(limb)
+    event.currentTarget.setPointerCapture(event.pointerId)
+  }
+  const move = (event: React.PointerEvent<SVGElement>) => {
+    if (!drag.current) return
+    const point = toSvg(event)
+    const interaction = drag.current
+    const next =
+      interaction.mode === 'move'
+        ? moveLimbHandle(
+            interaction.limb,
+            interaction.handleId,
+            translatePointInCameraPlane(
+              interaction.limb.handles.find(item => item.id === interaction.handleId)!.point,
+              pose,
+              point[0] - interaction.startPoint[0],
+              point[1] - interaction.startPoint[1]
+            )
+          )
+        : setLimbHandleRadius(
+            interaction.limb,
+            interaction.handleId,
+            interaction.startRadius *
+              (Math.hypot(
+                point[0] -
+                  projectWorldPoint(
+                    pose,
+                    interaction.limb.handles.find(item => item.id === interaction.handleId)!.point
+                  )[0],
+                point[1] -
+                  projectWorldPoint(
+                    pose,
+                    interaction.limb.handles.find(item => item.id === interaction.handleId)!.point
+                  )[1]
+              ) /
+                interaction.startDistance)
+          )
+    latest.current = next
+    if (manipulation.current) previewManipulation(manipulation.current, next)
+    if (previewFrame.current !== undefined) return
+    previewFrame.current = requestAnimationFrame(() => {
+      previewFrame.current = undefined
+      onPreview(latest.current)
+    })
+  }
+  const stop = () => {
+    if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current)
+    previewFrame.current = undefined
+    if (manipulation.current) {
+      finishManipulation(manipulation.current, 'commit', { preview: onPreview, commit: onCommit })
+    }
+    manipulation.current = null
+    drag.current = undefined
+  }
+  const cancel = () => {
+    if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current)
+    previewFrame.current = undefined
+    if (manipulation.current) {
+      finishManipulation(manipulation.current, 'cancel', { preview: onPreview, commit: onCommit })
+    }
+    manipulation.current = null
+    drag.current = undefined
+  }
+  useEscapeToCancel(cancel)
+  useEffect(
+    () => () => {
+      if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current)
+    },
+    []
+  )
+  return (
+    <g className="limb-editor" onPointerMove={move} onPointerUp={stop} onPointerCancel={cancel}>
+      <path className="limb-spine" d={geometry.spine} />
+      {geometry.handles.map(item => (
+        <g key={item.id} className="limb-handle">
+          <circle
+            className="limb-handle-radius"
+            cx={item.point[0]}
+            cy={item.point[1]}
+            r={Math.max(6, item.radius)}
+            onPointerDown={event => startRadius(item.id, item.point, event)}
+          />
+          <circle
+            className="limb-handle-point"
+            cx={item.point[0]}
+            cy={item.point[1]}
+            r="6"
+            onPointerDown={event => startMove(item.id, event)}
+          />
+        </g>
+      ))}
+    </g>
+  )
+}
+
 export function AvatarCanvas({
   expression,
   avatarEyes,
@@ -483,11 +648,15 @@ export function AvatarCanvas({
   scene,
   colors,
   renderStyle,
+  look,
   rotationGizmo,
   showWire,
   bodyEditing,
   selectedBodyNodeId,
   selectedBodyNode,
+  selectedLimbId,
+  selectedLimb,
+  limbs,
   selectedSide,
   linked,
   highlight,
@@ -495,6 +664,9 @@ export function AvatarCanvas({
   onBodyNodeSelect,
   onBodyNodePreview,
   onBodyNodeChange,
+  onLimbSelect,
+  onLimbPreview,
+  onLimbChange,
   onEyeSelect,
   onPreview,
   onChange,
@@ -502,6 +674,7 @@ export function AvatarCanvas({
   onEyeChange,
   playback,
   onManipulationStart,
+  stageZoom,
 }: {
   expression: Expression
   avatarEyes: AvatarEyeDefaults
@@ -509,11 +682,15 @@ export function AvatarCanvas({
   scene: RenderedScene
   colors: RenderedColors
   renderStyle: AvatarRenderStyle
+  look: PaintLook
   rotationGizmo: RenderedRotationGizmo
   showWire: boolean
   bodyEditing: boolean
   selectedBodyNodeId: 'primary' | string | null
   selectedBodyNode: BodyNode | null
+  selectedLimbId: string | null
+  selectedLimb: BodyLimb | null
+  limbs: BodyLimb[]
   selectedSide: -1 | 1 | null
   linked: { width: boolean; height: boolean; size: boolean }
   highlight: Highlight
@@ -521,6 +698,9 @@ export function AvatarCanvas({
   onBodyNodeSelect: (id: 'primary' | string | null) => void
   onBodyNodePreview: (next: BodyNode) => void
   onBodyNodeChange: (next: BodyNode) => void
+  onLimbSelect: (id: string | null) => void
+  onLimbPreview: (next: BodyLimb) => void
+  onLimbChange: (next: BodyLimb) => void
   onEyeSelect: (side: -1 | 1) => void
   onPreview: (next: Expression, target: CanvasPreviewTarget) => void
   onChange: (next: Expression) => void
@@ -528,6 +708,7 @@ export function AvatarCanvas({
   onEyeChange?: (next: Expression) => void
   playback: { name: string; status: Exclude<PlaybackStatus, 'stopped'> } | null
   onManipulationStart: () => Expression
+  stageZoom: MotionValue<number>
 }) {
   const { t } = useStudioLanguage()
   const {
@@ -537,14 +718,24 @@ export function AvatarCanvas({
     backNodeIds,
     frontNodeIds,
     headPath,
+    bodyFillPath,
     leftPath,
     rightPath,
     leftOpacity,
     rightOpacity,
+    mouthPath,
+    mouthOpacity,
     offsetX,
     offsetY,
   } = scene
   const svgRef = useRef<SVGSVGElement>(null)
+  const styleId = 'avatar-stage'
+  const pathPaint = useVectorPathPaint(renderStyle, colors.body, colors.eyes, styleId)
+  const bodyFill = pathPaint.fill
+  const eyeFill = pathPaint.eyeFill
+  const bodyStroke = pathPaint.stroke
+  const bodyStrokeWidth = pathPaint.strokeWidth
+  const eyeStrokeWidth = pathPaint.eyeStrokeWidth
   const [activeDragType, setActiveDragType] = useState<
     'arcball' | 'width' | 'height' | 'size' | 'spacing' | 'rotate' | null
   >(null)
@@ -573,11 +764,6 @@ export function AvatarCanvas({
     selectedSide === null
       ? null
       : renderEyeEditor(poseWithAvatarEyes(expression, avatarEyes), surface, selectedSide)
-  const selectedBodyPath = (() => {
-    if (!bodyEditing || !selectedBodyNodeId) return null
-    return findBodyNodePath(scene, selectedBodyNodeId)
-  })()
-
   const toSvg = (event: React.PointerEvent<SVGElement>): readonly [number, number] => {
     const rectangle = svgRef.current!.getBoundingClientRect()
     return [
@@ -614,6 +800,20 @@ export function AvatarCanvas({
       return
     }
     event.stopPropagation()
+    const limb = limbs.find(item => item.id === nodeId)
+    if (limb) {
+      if (selectedLimbId === limb.id) {
+        const next = insertLimbHandleAtScreen(
+          limb,
+          poseWithAvatarEyes(expression, avatarEyes),
+          toSvg(event)
+        )
+        if (next) onLimbChange(next)
+        return
+      }
+      onLimbSelect(limb.id)
+      return
+    }
     onBodyNodeSelect(nodeId)
   }
   const selectEye = (side: -1 | 1, event: React.PointerEvent<SVGPathElement>) => {
@@ -769,117 +969,222 @@ export function AvatarCanvas({
           <PlaybackIdentity name={playback.name} status={playback.status} />
         </motion.div>
       )}
-      {renderStyle.type === 'pixel' && (
-        <LivePixelAvatarCanvas
-          scene={scene}
-          colors={colors}
-          style={renderStyle}
-          className="avatar-pixel-canvas"
-        />
-      )}
-      <svg
-        ref={svgRef}
-        className="avatar"
-        viewBox="-150 -150 300 300"
-        role="img"
-        aria-label={t('Avatar procédural')}
-        onPointerMove={move}
-        onPointerUp={commitDrag}
-        onPointerCancel={cancelDrag}
-      >
-        <defs>
-          <clipPath id="avatar-head-clip">
-            <motion.path d={headPath} />
-          </clipPath>
-        </defs>
-        <motion.g style={{ x: offsetX, y: offsetY }}>
-          {backPaths.map((pathValue, index) => (
-            <motion.path
-              className={`avatar-head ${highlight === 'head' ? 'cyan-outline' : ''}`}
-              d={pathValue}
-              key={index}
-              onPointerDown={event => selectBodyPath(event, backNodeIds.current[index])}
-            />
-          ))}
-          <motion.path
-            className={`avatar-head ${highlight === 'head' ? 'cyan-outline' : ''}`}
-            d={headPath}
-            onPointerDown={event => {
-              onBodyNodeSelect('primary')
-              startDrag(event)
-            }}
-          />
-          <g clipPath="url(#avatar-head-clip)">
-            {(showWire || highlight === 'head') &&
-              wirePaths.map((pathValue, index) => (
-                <motion.path className="wire" d={pathValue} key={index} />
-              ))}
-            <motion.path
-              className={`avatar-eye ${selectedSide === -1 || highlight === 'left' || highlight === 'both' ? 'cyan-outline' : ''}`}
-              d={leftPath}
-              opacity={leftOpacity}
-              onPointerDown={event => selectEye(-1, event)}
-            />
-            <motion.path
-              className={`avatar-eye ${selectedSide === 1 || highlight === 'right' || highlight === 'both' ? 'cyan-outline' : ''}`}
-              d={rightPath}
-              opacity={rightOpacity}
-              onPointerDown={event => selectEye(1, event)}
-            />
-          </g>
-          {frontPaths.map((pathValue, index) => (
-            <motion.path
-              className={`avatar-head ${highlight === 'head' ? 'cyan-outline' : ''}`}
-              d={pathValue}
-              key={index}
-              onPointerDown={event => selectBodyPath(event, frontNodeIds.current[index])}
-            />
-          ))}
-        </motion.g>
-        {selectedBodyPath && (
-          <motion.path className="selection-outline body-selection-outline" d={selectedBodyPath} />
-        )}
-        {bodyEditing && selectedBodyNode && (
-          <BodyNodeGizmo
-            svgRef={svgRef}
-            pose={poseWithAvatarEyes(expression, avatarEyes)}
-            node={selectedBodyNode}
-            onPreview={onBodyNodePreview}
-            onCommit={onBodyNodeChange}
+      <motion.div className="avatar-zoom-layer" style={{ scale: stageZoom }}>
+        {renderStyle.type === 'pixel' && (
+          <LivePixelAvatarCanvas
+            scene={scene}
+            colors={colors}
+            style={renderStyle}
+            look={look}
+            className="avatar-pixel-canvas"
           />
         )}
-        {editor?.visible && (
-          <g className="eye-editor">
-            {activeDragType !== null && activeDragType !== 'arcball' && (
-              <path className="selection-outline" d={editor.selectionPath} />
-            )}
-            <path className="editor-guide" d={editor.widthGuide} />
-            <path className="editor-guide" d={editor.heightGuide} />
-            <path className="editor-guide" d={editor.rotationGuide} />
-            <path className="editor-guide" d={editor.spacingGuide} />
-            <EditorCircle point={editor.widthHandle} label="L" type="width" onStart={startHandle} />
-            <EditorCircle
-              point={editor.heightHandle}
-              label="H"
-              type="height"
-              onStart={startHandle}
+        <svg
+          ref={svgRef}
+          className="avatar"
+          viewBox="-150 -150 300 300"
+          role="img"
+          aria-label={t('Avatar procédural')}
+          onPointerMove={move}
+          onPointerUp={commitDrag}
+          onPointerCancel={cancelDrag}
+        >
+          <defs>
+            <clipPath id="avatar-head-clip">
+              <motion.path d={headPath} />
+            </clipPath>
+            <AvatarStyleDefs id={styleId} style={renderStyle} bodyColor={colors.body} />
+          </defs>
+          <motion.g style={{ x: offsetX, y: offsetY }}>
+            <g
+              className="avatar-ink-finish"
+              filter={renderStyle.type === 'borderlands' ? `url(#${styleId}-ink)` : undefined}
+            >
+              <AvatarGlowUnderlay
+                id={styleId}
+                style={renderStyle}
+                bodyColor={colors.body}
+                headPath={headPath}
+                bodyFillPath={bodyFillPath}
+                backPaths={backPaths}
+                frontPaths={frontPaths}
+              />
+              <motion.path
+                className="avatar-head"
+                d={bodyFillPath}
+                strokeWidth={bodyStrokeWidth}
+                strokeLinejoin={pathPaint.strokeLinejoin}
+                strokeLinecap={pathPaint.strokeLinecap}
+                fillRule="nonzero"
+                style={{
+                  fill: bodyFill,
+                  stroke: bodyStroke,
+                  paintOrder: pathPaint.paintOrder,
+                }}
+                pointerEvents="none"
+              />
+              <AvatarPaintOverlay
+                id={styleId}
+                clipId="avatar-head-clip"
+                paint={scene.paint}
+                look={look}
+                style={renderStyle}
+                bodyColor={colors.body}
+                eyeColor={colors.eyes}
+              />
+              <AvatarShadeLayers
+                id={styleId}
+                silhouette={bodyFillPath}
+                look={look}
+                style={renderStyle}
+              />
+              <g clipPath="url(#avatar-head-clip)">
+                {(showWire || highlight === 'head') &&
+                  wirePaths.map((pathValue, index) => (
+                    <motion.path className="wire" d={pathValue} key={index} />
+                  ))}
+                <motion.path
+                  className={`avatar-eye ${selectedSide === -1 || highlight === 'left' || highlight === 'both' ? 'cyan-outline' : ''}`}
+                  d={leftPath}
+                  opacity={leftOpacity}
+                  strokeWidth={
+                    selectedSide === -1 || highlight === 'left' || highlight === 'both'
+                      ? undefined
+                      : eyeStrokeWidth
+                  }
+                  strokeLinejoin={pathPaint.strokeLinejoin}
+                  strokeLinecap={pathPaint.strokeLinecap}
+                  style={{
+                    fill: eyeFill,
+                    stroke:
+                      selectedSide === -1 || highlight === 'left' || highlight === 'both'
+                        ? undefined
+                        : bodyStroke,
+                    paintOrder: pathPaint.paintOrder,
+                  }}
+                  onPointerDown={event => selectEye(-1, event)}
+                />
+                <motion.path
+                  className={`avatar-eye ${selectedSide === 1 || highlight === 'right' || highlight === 'both' ? 'cyan-outline' : ''}`}
+                  d={rightPath}
+                  opacity={rightOpacity}
+                  strokeWidth={
+                    selectedSide === 1 || highlight === 'right' || highlight === 'both'
+                      ? undefined
+                      : eyeStrokeWidth
+                  }
+                  strokeLinejoin={pathPaint.strokeLinejoin}
+                  strokeLinecap={pathPaint.strokeLinecap}
+                  style={{
+                    fill: eyeFill,
+                    stroke:
+                      selectedSide === 1 || highlight === 'right' || highlight === 'both'
+                        ? undefined
+                        : bodyStroke,
+                    paintOrder: pathPaint.paintOrder,
+                  }}
+                  onPointerDown={event => selectEye(1, event)}
+                />
+                {renderStyle.type !== 'pixel' && (
+                  <motion.path
+                    className="avatar-mouth"
+                    d={mouthPath}
+                    opacity={mouthOpacity}
+                    style={{ fill: eyeFill }}
+                    pointerEvents="none"
+                  />
+                )}
+              </g>
+              <AvatarInkMarks
+                id={styleId}
+                style={renderStyle}
+                bodyFillPath={bodyFillPath}
+                headPath={headPath}
+                backPaths={backPaths}
+                frontPaths={frontPaths}
+              />
+            </g>
+            {backPaths.map((pathValue, index) => (
+              <motion.path
+                className="avatar-head-hit"
+                d={pathValue}
+                key={index}
+                onPointerDown={event => selectBodyPath(event, backNodeIds.current[index])}
+              />
+            ))}
+            <motion.path
+              className="avatar-head-hit"
+              d={headPath}
+              onPointerDown={event => {
+                onBodyNodeSelect('primary')
+                startDrag(event)
+              }}
             />
-            <EditorCircle
-              point={editor.rotateHandle}
-              label="R"
-              type="rotate"
-              onStart={startHandle}
+            {frontPaths.map((pathValue, index) => (
+              <motion.path
+                className="avatar-head-hit"
+                d={pathValue}
+                key={index}
+                onPointerDown={event => selectBodyPath(event, frontNodeIds.current[index])}
+              />
+            ))}
+          </motion.g>
+          {bodyEditing && selectedBodyNode && (
+            <BodyNodeGizmo
+              svgRef={svgRef}
+              pose={poseWithAvatarEyes(expression, avatarEyes)}
+              node={selectedBodyNode}
+              onPreview={onBodyNodePreview}
+              onCommit={onBodyNodeChange}
             />
-            <EditorSquare point={editor.sizeHandle} label="S" type="size" onStart={startHandle} />
-            <EditorSquare
-              point={editor.spacingHandle}
-              label="E"
-              type="spacing"
-              onStart={startHandle}
+          )}
+          {bodyEditing && selectedLimb && (
+            <LimbEditor
+              svgRef={svgRef}
+              pose={poseWithAvatarEyes(expression, avatarEyes)}
+              limb={selectedLimb}
+              onPreview={onLimbPreview}
+              onCommit={onLimbChange}
             />
-          </g>
-        )}
-      </svg>
+          )}
+          {editor?.visible && (
+            <g className="eye-editor">
+              {activeDragType !== null && activeDragType !== 'arcball' && (
+                <path className="selection-outline" d={editor.selectionPath} />
+              )}
+              <path className="editor-guide" d={editor.widthGuide} />
+              <path className="editor-guide" d={editor.heightGuide} />
+              <path className="editor-guide" d={editor.rotationGuide} />
+              <path className="editor-guide" d={editor.spacingGuide} />
+              <EditorCircle
+                point={editor.widthHandle}
+                label="L"
+                type="width"
+                onStart={startHandle}
+              />
+              <EditorCircle
+                point={editor.heightHandle}
+                label="H"
+                type="height"
+                onStart={startHandle}
+              />
+              <EditorCircle
+                point={editor.rotateHandle}
+                label="R"
+                type="rotate"
+                onStart={startHandle}
+              />
+              <EditorSquare point={editor.sizeHandle} label="S" type="size" onStart={startHandle} />
+              <EditorSquare
+                point={editor.spacingHandle}
+                label="E"
+                type="spacing"
+                onStart={startHandle}
+              />
+            </g>
+          )}
+        </svg>
+      </motion.div>
       <RotationGizmo
         expression={expression}
         rendered={rotationGizmo}

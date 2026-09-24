@@ -1,8 +1,8 @@
-# Bible Strong Avatar Lab
+# little guys
 
-Bible Strong Avatar Lab is a browser-based authoring studio for procedural 2D avatars. It combines 3D-inspired geometry with SVG rendering so you can construct a character, define its neutral appearance, create expressions, compose reusable animations, and export the result without depending on the Studio UI.
+little guys is a browser-based authoring studio for procedural 2D avatars. It combines 3D-inspired geometry with SVG rendering so you can construct a character, define its neutral appearance, create expressions, compose reusable animations, and export the result without depending on the Studio UI.
 
-Website: [avatars.bible-strong.app](https://avatars.bible-strong.app) · Source: [GitHub](https://github.com/smontlouis/bible-strong-avatar-lab)
+Source: [GitHub](https://github.com/JasonKappes/little-guys)
 
 The application runs entirely in the browser. Projects are stored locally and can be moved between browsers with JSON export/import; no account or backend is required.
 
@@ -47,7 +47,7 @@ This copy-on-write model lets multiple avatars share the defaults without accide
 
 ### React package
 
-The React export is a local ZIP package containing a reusable TypeScript/React avatar component and the selected animations. It is intended for integration into React applications without shipping the Avatar Lab interface.
+The React export is a local ZIP package containing a reusable TypeScript/React avatar component and the selected animations. It is intended for integration into React applications without shipping the little guys interface.
 
 ### JavaScript package
 
@@ -146,6 +146,7 @@ Geometry, playback, document operations, and the standalone runtime remain frame
 | `src/i18n/`                              | Localized interface copy and translation tests.                          |
 | `src/lib/`                               | Small shared utilities without product-domain ownership.                 |
 | `scripts/generate-standalone-engine.mjs` | Standalone-engine generator.                                             |
+| `docs/product-map.md`                    | Functionality map for product and design ideation.                       |
 | `docs/adr/`                              | Accepted architecture decisions.                                         |
 | `legacy/`                                | Self-contained HTML prototypes that preceded the React application.      |
 
@@ -165,7 +166,7 @@ For the domain vocabulary, invariants, and architecture boundaries, read [CONTEX
 
 ## License
 
-Bible Strong Avatar Lab is licensed under the [GNU Affero General Public License v3.0](./LICENSE).
+little guys is licensed under the [GNU Affero General Public License v3.0](./LICENSE).
 
 You may use, study, modify, and redistribute the project. If you distribute the application or a modified version, you must notably:
 

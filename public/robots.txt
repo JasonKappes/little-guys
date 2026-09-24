@@ -1,4 +1,2 @@
 User-agent: *
 Allow: /
-
-Sitemap: https://avatars.bible-strong.app/sitemap.xml

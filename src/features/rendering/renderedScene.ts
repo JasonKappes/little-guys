@@ -2,10 +2,13 @@ import { motionValue, type MotionValue } from 'motion'
 
 import type { AvatarColors } from '../avatar/avatars'
 import { MAX_BODY_NODES } from '../avatar/body'
+import { MAX_BODY_LIMBS } from '../avatar/limbs'
 import type { AvatarGeometry } from '../avatar/geometry'
+import { scenePaintOf, type ScenePaint } from './paintPlan'
 
 export type RenderedScene = {
   headPath: MotionValue<string>
+  bodyFillPath: MotionValue<string>
   backPaths: MotionValue<string>[]
   frontPaths: MotionValue<string>[]
   backNodeIds: { current: (string | null)[] }
@@ -14,9 +17,12 @@ export type RenderedScene = {
   rightPath: MotionValue<string>
   leftOpacity: MotionValue<number>
   rightOpacity: MotionValue<number>
+  mouthPath: MotionValue<string>
+  mouthOpacity: MotionValue<number>
   offsetX: MotionValue<number>
   offsetY: MotionValue<number>
   wirePaths: MotionValue<string>[]
+  paint: MotionValue<ScenePaint>
 }
 
 export type RenderedColors = {
@@ -24,10 +30,11 @@ export type RenderedColors = {
   eyes: MotionValue<string>
 }
 
-const bodyPathSlots = MAX_BODY_NODES + 2
+const bodyPathSlots = MAX_BODY_NODES + MAX_BODY_LIMBS + 2
 
 export const createRenderedScene = (geometry: AvatarGeometry): RenderedScene => ({
   headPath: motionValue(geometry.headPath),
+  bodyFillPath: motionValue(geometry.bodyFillPath),
   backPaths: Array.from({ length: bodyPathSlots }, (_, index) =>
     motionValue(geometry.backPaths[index] ?? '')
   ),
@@ -40,9 +47,12 @@ export const createRenderedScene = (geometry: AvatarGeometry): RenderedScene => 
   rightPath: motionValue(geometry.rightPath),
   leftOpacity: motionValue(geometry.leftVisible ? 1 : 0),
   rightOpacity: motionValue(geometry.rightVisible ? 1 : 0),
+  mouthPath: motionValue(geometry.mouthPath),
+  mouthOpacity: motionValue(geometry.mouthVisible ? 1 : 0),
   offsetX: motionValue(0),
   offsetY: motionValue(0),
   wirePaths: geometry.wirePaths.map(path => motionValue(path)),
+  paint: motionValue(scenePaintOf(geometry)),
 })
 
 export const createRenderedColors = (colors: AvatarColors): RenderedColors => ({
@@ -62,6 +72,7 @@ export const paintRenderedOffset = (scene: RenderedScene, offset: { x: number; y
 
 export const paintRenderedScene = (scene: RenderedScene, geometry: AvatarGeometry) => {
   scene.headPath.set(geometry.headPath)
+  scene.bodyFillPath.set(geometry.bodyFillPath)
   scene.backNodeIds.current = geometry.backNodeIds
   scene.frontNodeIds.current = geometry.frontNodeIds
   scene.backPaths.forEach((path, index) => path.set(geometry.backPaths[index] ?? ''))
@@ -70,7 +81,10 @@ export const paintRenderedScene = (scene: RenderedScene, geometry: AvatarGeometr
   scene.rightPath.set(geometry.rightPath)
   scene.leftOpacity.set(geometry.leftVisible ? 1 : 0)
   scene.rightOpacity.set(geometry.rightVisible ? 1 : 0)
+  scene.mouthPath.set(geometry.mouthPath)
+  scene.mouthOpacity.set(geometry.mouthVisible ? 1 : 0)
   scene.wirePaths.forEach((path, index) => path.set(geometry.wirePaths[index] ?? ''))
+  scene.paint.set(scenePaintOf(geometry))
 }
 
 export const findBodyNodePath = (scene: RenderedScene, selectedBodyNodeId: 'primary' | string) => {

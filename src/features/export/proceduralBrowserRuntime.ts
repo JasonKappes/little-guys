@@ -35,56 +35,87 @@ const interpolateColor = (from, to, progress) => {
   const value = left.map((channel, index) => Math.round(channel + (right[index] - channel) * progress));
   return '#' + value.map(channel => channel.toString(16).padStart(2, '0')).join('');
 };
+const mixHex = (from, to, amount) => interpolateColor(from, to, Math.max(0, Math.min(1, amount)));
+const hexLuminance = color => {
+  const [red, green, blue] = colorChannels(color);
+  return (0.2126 * red + 0.7152 * green + 0.0722 * blue) / 255;
+};
+const resolveExportMaterial = (style, bodyColor) => {
+  const type = style && style.type;
+  const strength = typeof style?.strength === 'number' ? style.strength : 55;
+  const amount = Math.max(0, Math.min(1, strength / 100));
+  const isInk = type === 'borderlands';
+  const outlineWidth = typeof style?.width === 'number' ? style.width : isInk ? 12 : 8;
+  const wobble = typeof style?.wobble === 'number' ? style.wobble : 6;
+  const inkColor = typeof style?.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(style.color)
+    ? style.color.toLowerCase()
+    : '#1a140c';
+  return {
+    type,
+    useShade: type === 'softShade',
+    showOutline: type === 'outline' || isInk,
+    showGlow: type === 'glow',
+    showBorderlands: isInk,
+    highlight: mixHex(bodyColor, '#ffffff', 0.16 + amount * 0.42),
+    mid: bodyColor,
+    shadow: mixHex(bodyColor, '#0b1020', 0.2 + amount * 0.4),
+    outlineColor: isInk ? inkColor : hexLuminance(bodyColor) < 0.28 ? mixHex(bodyColor, '#f4f7fb', 0.42) : mixHex(bodyColor, '#0b0d10', 0.64),
+    outlineWidth,
+    eyeOutlineWidth: outlineWidth * (isInk ? 0.42 : 0.45),
+    glowColor: mixHex(bodyColor, '#ffffff', 0.38),
+    glowSize: typeof style?.size === 'number' ? style.size : 10,
+    wobble,
+  };
+};
+const paintInkStroke = (node, path, color, width, opacity, dash) => {
+  node.setAttribute('d', path || '');
+  node.setAttribute('fill', 'none');
+  node.setAttribute('stroke', color);
+  node.setAttribute('stroke-width', String(width));
+  node.setAttribute('stroke-linejoin', 'round');
+  node.setAttribute('stroke-linecap', 'round');
+  node.style.opacity = opacity <= 0 ? '0' : String(opacity);
+  if (dash) node.setAttribute('stroke-dasharray', dash);
+  else node.removeAttribute('stroke-dasharray');
+};
+const paintPathStyle = (node, fill, material, forEye) => {
+  node.setAttribute('fill', fill);
+  if (material.showOutline) {
+    node.setAttribute('stroke', material.outlineColor);
+    node.setAttribute('stroke-width', String(forEye ? material.eyeOutlineWidth : material.outlineWidth));
+    node.setAttribute('stroke-linejoin', 'round');
+    node.setAttribute('stroke-linecap', 'round');
+    node.style.paintOrder = 'stroke fill';
+  } else {
+    node.removeAttribute('stroke');
+    node.removeAttribute('stroke-width');
+    node.style.paintOrder = '';
+  }
+};
 const resolveColors = expression => ({
   body: expression.bodyColor || DATA.avatar.colors.body,
   eyes: expression.eyeColor || DATA.avatar.colors.eyes,
 });
 const svgElement = name => document.createElementNS(SVG_NS, name);
-const canvasPath = (context, value, color, opacity = 1) => {
-  if (!value || opacity <= 0) return;
-  context.globalAlpha = opacity;
-  context.fillStyle = color;
-  context.fill(new Path2D(value));
+const avatarLook = {
+  palette: DATA.avatar.palette || { accent: DATA.avatar.colors.body, accent2: DATA.avatar.colors.body },
+  shading: DATA.avatar.shading || { amount: 0, size: 16, angle: 135, highlight: 0, color: '#1d1b3f' },
 };
-const paintPixelGeometry = (context, geometry, offset, colors, resolution) => {
-  const scale = resolution / 300;
-  context.clearRect(0, 0, resolution, resolution);
-  context.imageSmoothingEnabled = false;
-  context.save();
-  context.setTransform(scale, 0, 0, scale, resolution / 2, resolution / 2);
-  context.translate(offset.x, offset.y);
-  geometry.backPaths.forEach(value => canvasPath(context, value, colors.body));
-  canvasPath(context, geometry.headPath, colors.body);
-  context.save();
-  context.clip(new Path2D(geometry.headPath));
-  canvasPath(context, geometry.leftPath, colors.eyes, geometry.leftVisible ? 1 : 0);
-  canvasPath(context, geometry.rightPath, colors.eyes, geometry.rightVisible ? 1 : 0);
-  context.restore();
-  geometry.frontPaths.forEach(value => canvasPath(context, value, colors.body));
-  context.restore();
-  const image = context.getImageData(0, 0, resolution, resolution);
-  const body = colorChannels(colors.body);
-  const eyes = colorChannels(colors.eyes);
-  for (let index = 0; index < image.data.length; index += 4) {
-    if (image.data[index + 3] < 128) {
-      image.data[index] = 0;
-      image.data[index + 1] = 0;
-      image.data[index + 2] = 0;
-      image.data[index + 3] = 0;
-      continue;
-    }
-    const bodyDistance = (image.data[index] - body[0]) ** 2 +
-      (image.data[index + 1] - body[1]) ** 2 + (image.data[index + 2] - body[2]) ** 2;
-    const eyeDistance = (image.data[index] - eyes[0]) ** 2 +
-      (image.data[index + 1] - eyes[1]) ** 2 + (image.data[index + 2] - eyes[2]) ** 2;
-    const color = bodyDistance <= eyeDistance ? body : eyes;
-    image.data[index] = color[0];
-    image.data[index + 1] = color[1];
-    image.data[index + 2] = color[2];
-    image.data[index + 3] = 255;
-  }
-  context.putImageData(image, 0, 0);
-};
+const pixelFrame = (geometry, offset, colors) => ({
+  headPath: geometry.headPath,
+  backPaths: geometry.backPaths.filter(Boolean),
+  frontPaths: geometry.frontPaths.filter(Boolean),
+  leftPath: geometry.leftPath,
+  rightPath: geometry.rightPath,
+  leftOpacity: geometry.leftVisible ? 1 : 0,
+  rightOpacity: geometry.rightVisible ? 1 : 0,
+  offsetX: offset.x,
+  offsetY: offset.y,
+  bodyColor: colors.body,
+  eyeColor: colors.eyes,
+  paint: geometry,
+  look: avatarLook,
+});
 
 function mountAvatar(target, options = {}) {
   const host = typeof target === 'string' ? document.querySelector(target) : target;
@@ -101,7 +132,8 @@ function mountAvatar(target, options = {}) {
   svg.style.height = typeof options.size === 'number' ? options.size + 'px' : options.size || '100%';
   svg.style.display = 'block';
   svg.style.overflow = 'visible';
-  const pixelStyle = DATA.avatar.renderStyle?.type === 'pixel' ? DATA.avatar.renderStyle : null;
+  const renderStyle = DATA.avatar.renderStyle || { type: 'vector' };
+  const pixelStyle = renderStyle.type === 'pixel' ? renderStyle : null;
   const canvas = document.createElement('canvas');
   const pixelResolution = pixelStyle ? Math.max(8, Math.min(192, Math.round(pixelStyle.resolution))) : 64;
   canvas.width = pixelResolution;
@@ -119,27 +151,103 @@ function mountAvatar(target, options = {}) {
   clipPath.id = clipId;
   clipPath.append(clipHead);
   defs.append(clipPath);
+  const shadeId = 'avatar-procedural-shade-' + instanceId;
+  const glowId = 'avatar-procedural-glow-' + instanceId;
+  const inkId = 'avatar-procedural-ink-' + instanceId;
+  const shadeGradient = svgElement('radialGradient');
+  shadeGradient.id = shadeId;
+  shadeGradient.setAttribute('cx', '36%');
+  shadeGradient.setAttribute('cy', '30%');
+  shadeGradient.setAttribute('r', '72%');
+  const shadeStops = [svgElement('stop'), svgElement('stop'), svgElement('stop')];
+  shadeStops[0].setAttribute('offset', '0');
+  shadeStops[1].setAttribute('offset', '0.48');
+  shadeStops[2].setAttribute('offset', '1');
+  shadeStops.forEach(stop => shadeGradient.append(stop));
+  const glowFilter = svgElement('filter');
+  glowFilter.id = glowId;
+  glowFilter.setAttribute('x', '-60%');
+  glowFilter.setAttribute('y', '-60%');
+  glowFilter.setAttribute('width', '220%');
+  glowFilter.setAttribute('height', '220%');
+  const glowBlur = svgElement('feGaussianBlur');
+  glowBlur.setAttribute('in', 'SourceGraphic');
+  glowFilter.append(glowBlur);
+  const inkFilter = svgElement('filter');
+  inkFilter.id = inkId;
+  inkFilter.setAttribute('x', '-45%');
+  inkFilter.setAttribute('y', '-45%');
+  inkFilter.setAttribute('width', '190%');
+  inkFilter.setAttribute('height', '190%');
+  inkFilter.setAttribute('color-interpolation-filters', 'sRGB');
+  const inkNoise = svgElement('feTurbulence');
+  inkNoise.setAttribute('type', 'fractalNoise');
+  inkNoise.setAttribute('numOctaves', '2');
+  inkNoise.setAttribute('seed', '4');
+  inkNoise.setAttribute('result', 'noise');
+  const inkDisplace = svgElement('feDisplacementMap');
+  inkDisplace.setAttribute('in', 'SourceGraphic');
+  inkDisplace.setAttribute('in2', 'noise');
+  inkDisplace.setAttribute('xChannelSelector', 'R');
+  inkDisplace.setAttribute('yChannelSelector', 'G');
+  inkFilter.append(inkNoise, inkDisplace);
+  const inkErodeId = inkId + '-erode';
+  const inkErodeFilter = svgElement('filter');
+  inkErodeFilter.id = inkErodeId;
+  const inkErode = svgElement('feMorphology');
+  inkErode.setAttribute('operator', 'erode');
+  inkErodeFilter.append(inkErode);
+  const inkRimId = inkId + '-rim';
+  const inkRimMask = svgElement('mask');
+  inkRimMask.id = inkRimId;
+  inkRimMask.setAttribute('maskUnits', 'userSpaceOnUse');
+  inkRimMask.setAttribute('x', '-200');
+  inkRimMask.setAttribute('y', '-200');
+  inkRimMask.setAttribute('width', '400');
+  inkRimMask.setAttribute('height', '400');
+  const inkRimFull = svgElement('path');
+  inkRimFull.setAttribute('fill', '#fff');
+  const inkRimCoreGroup = svgElement('g');
+  inkRimCoreGroup.setAttribute('filter', 'url(#' + inkErodeId + ')');
+  const inkRimCore = svgElement('path');
+  inkRimCore.setAttribute('fill', '#000');
+  inkRimCoreGroup.append(inkRimCore);
+  inkRimMask.append(inkRimFull, inkRimCoreGroup);
+  defs.append(shadeGradient, glowFilter, inkFilter, inkErodeFilter, inkRimMask);
   svg.append(defs);
   const motionLayer = svgElement('g');
+  const finishLayer = svgElement('g');
+  const glowLayer = svgElement('g');
+  glowLayer.setAttribute('filter', 'url(#' + glowId + ')');
+  glowLayer.style.pointerEvents = 'none';
   const backLayer = svgElement('g');
   const head = svgElement('path');
   const eyesLayer = svgElement('g');
   const leftEye = svgElement('path');
   const rightEye = svgElement('path');
   const frontLayer = svgElement('g');
+  const inkLayer = svgElement('g');
+  inkLayer.setAttribute('mask', 'url(#' + inkRimId + ')');
+  inkLayer.style.pointerEvents = 'none';
+  const inkInner = svgElement('path');
+  inkLayer.append(inkInner);
+  const paintLayer = svgElement('g');
+  paintLayer.style.pointerEvents = 'none';
+  const shadeNodes = AvatarProceduralEngine.createSvgShadeNodes(document, defs, 'avatar-procedural-shade-layer-' + instanceId);
   eyesLayer.setAttribute('clip-path', 'url(#' + clipId + ')');
   eyesLayer.append(leftEye, rightEye);
-  motionLayer.append(backLayer, head, eyesLayer, frontLayer);
+  finishLayer.append(glowLayer, backLayer, head, paintLayer, shadeNodes.layer, eyesLayer, frontLayer, inkLayer);
+  motionLayer.append(finishLayer);
   svg.append(motionLayer);
   const renderElement = pixelStyle ? canvas : svg;
   host.replaceChildren(renderElement);
 
-  const ensurePaths = (group, paths, fill) => {
+  const ensurePaths = (group, paths, fill, material) => {
     while (group.children.length < paths.length) group.append(svgElement('path'));
     while (group.children.length > paths.length) group.lastElementChild.remove();
     paths.forEach((path, index) => {
       group.children[index].setAttribute('d', path);
-      group.children[index].setAttribute('fill', fill);
+      paintPathStyle(group.children[index], fill, material, false);
     });
   };
   let currentAnimation = options.animation && DATA.animations[options.animation] ? options.animation : animationNames[0];
@@ -192,25 +300,73 @@ function mountAvatar(target, options = {}) {
     const geometry = AvatarProceduralEngine.renderAvatar(renderedPose, DATA.avatar.surface, blinkAmount, {
       includeWire: false,
       bodyNodes: DATA.avatar.bodyNodes,
+      limbs: DATA.avatar.limbs,
+      markings: DATA.avatar.markings || [],
       eyeOffset,
     });
     const offset = AvatarProceduralEngine.ambientBodyOffset(currentPose.expression, bodyElapsed, ambientStrength);
     if (pixelStyle && pixelContext) {
-      paintPixelGeometry(pixelContext, geometry, offset, currentColors, pixelResolution);
+      AvatarProceduralEngine.paintPixelAvatar(
+        pixelContext,
+        pixelFrame(geometry, offset, currentColors),
+        { type: 'pixel', resolution: pixelResolution }
+      );
       return;
     }
+    const material = resolveExportMaterial(renderStyle, currentColors.body);
+    const bodyFill = material.useShade ? 'url(#' + shadeId + ')' : currentColors.body;
+    shadeStops[0].setAttribute('stop-color', material.highlight);
+    shadeStops[1].setAttribute('stop-color', material.mid);
+    shadeStops[2].setAttribute('stop-color', material.shadow);
+    glowBlur.setAttribute('stdDeviation', String(material.glowSize));
+    glowLayer.style.display = material.showGlow ? '' : 'none';
+    inkNoise.setAttribute('baseFrequency', String(Math.max(0.018, 0.056 - material.wobble * 0.002)));
+    inkDisplace.setAttribute('scale', String(2 + material.wobble * 0.85));
+    if (material.showBorderlands) finishLayer.setAttribute('filter', 'url(#' + inkId + ')');
+    else finishLayer.removeAttribute('filter');
     motionLayer.setAttribute('transform', 'translate(' + offset.x + ' ' + offset.y + ')');
-    ensurePaths(backLayer, geometry.backPaths, currentColors.body);
-    ensurePaths(frontLayer, geometry.frontPaths, currentColors.body);
-    head.setAttribute('d', geometry.headPath);
-    head.setAttribute('fill', currentColors.body);
+    ensurePaths(glowLayer, material.showGlow ? [geometry.bodyFillPath || geometry.headPath] : [], material.glowColor, { showOutline: false });
+    ensurePaths(backLayer, [], bodyFill, material);
+    ensurePaths(frontLayer, [], bodyFill, material);
+    head.setAttribute('d', geometry.bodyFillPath || geometry.headPath);
+    paintPathStyle(head, bodyFill, material, false);
     clipHead.setAttribute('d', geometry.headPath);
+    AvatarProceduralEngine.syncSvgPaintOps(
+      paintLayer,
+      AvatarProceduralEngine.buildPaintPlan(
+        geometry,
+        AvatarProceduralEngine.paintColorsOf(currentColors, avatarLook.palette),
+        bodyFill
+      ),
+      'url(#' + clipId + ')'
+    );
+    AvatarProceduralEngine.syncSvgShadeLayers(
+      shadeNodes,
+      geometry.bodyFillPath || geometry.headPath,
+      AvatarProceduralEngine.shadeLayers(avatarLook.shading)
+    );
     leftEye.setAttribute('d', geometry.leftPath);
     rightEye.setAttribute('d', geometry.rightPath);
-    leftEye.setAttribute('fill', currentColors.eyes);
-    rightEye.setAttribute('fill', currentColors.eyes);
+    paintPathStyle(leftEye, currentColors.eyes, material, true);
+    paintPathStyle(rightEye, currentColors.eyes, material, true);
     leftEye.style.display = geometry.leftVisible ? '' : 'none';
     rightEye.style.display = geometry.rightVisible ? '' : 'none';
+    if (material.showBorderlands) {
+      const inkBody = geometry.bodyFillPath || geometry.headPath;
+      inkErode.setAttribute('radius', String(Math.max(1.5, material.outlineWidth * 0.45)));
+      inkRimFull.setAttribute('d', inkBody);
+      inkRimCore.setAttribute('d', inkBody);
+      paintInkStroke(
+        inkInner,
+        inkBody,
+        material.outlineColor,
+        material.outlineWidth * 0.28,
+        1,
+        '16 22 9 18 13 26'
+      );
+    } else {
+      inkInner.setAttribute('d', '');
+    }
   };
   const tick = time => {
     frameRequest = null;

@@ -1,5 +1,12 @@
-import type { AvatarColors } from '../avatar/avatars'
+import type { AvatarColors, AvatarRenderStyle } from '../avatar/avatars'
 import type { RenderedScene } from '../rendering/renderedScene'
+import {
+  bodyFillForMaterial,
+  inkInnerDash,
+  resolveVectorMaterial,
+  vectorStyleDefsMarkup,
+} from '../rendering/vectorMaterials'
+import { buildPaintPlan, paintColorsOf, shadeLayers, type PaintLook } from '../rendering/paintPlan'
 
 export type SnapshotBackground = 'transparent' | 'solid' | 'linear' | 'radial'
 
@@ -21,8 +28,16 @@ const escapeXml = (value: string) =>
     return entities[character]
   })
 
-const path = (value: string, fill: string, opacity = 1) =>
-  value ? `<path d="${escapeXml(value)}" fill="${fill}" opacity="${opacity}"/>` : ''
+const path = (value: string, fill: string, opacity = 1, extras = '') =>
+  value ? `<path d="${escapeXml(value)}" fill="${fill}" opacity="${opacity}"${extras}/>` : ''
+
+const outlineExtras = (color: string, width: number) =>
+  ` stroke="${color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round" style="paint-order:stroke fill"`
+
+const inkStroke = (value: string, color: string, width: number, opacity = 1, dash = '') =>
+  value
+    ? `<path d="${escapeXml(value)}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"${dash ? ` stroke-dasharray="${dash}"` : ''} opacity="${opacity}"/>`
+    : ''
 
 const backgroundMarkup = (options: SnapshotOptions) => {
   if (options.background === 'transparent') return ''
@@ -49,25 +64,75 @@ export const serializeAvatarSnapshot = (
   name: string,
   scene: RenderedScene,
   colors: AvatarColors,
-  options: SnapshotOptions
+  options: SnapshotOptions,
+  renderStyle: AvatarRenderStyle = { type: 'vector' },
+  look?: PaintLook
 ) => {
   const headPath = scene.headPath.get()
-  const backPaths = scene.backPaths.map(item => item.get()).filter(Boolean)
-  const frontPaths = scene.frontPaths.map(item => item.get()).filter(Boolean)
+  const bodyFillPath = scene.bodyFillPath.get() || headPath
   const offsetX = scene.offsetX.get()
   const offsetY = scene.offsetY.get()
+  const material = resolveVectorMaterial(renderStyle, colors.body)
+  const shadeId = 'snapshot-shade'
+  const bodyFill = bodyFillForMaterial(material, shadeId)
+  const bodyExtras = material.showOutline
+    ? outlineExtras(material.outlineColor, material.outlineWidth)
+    : ''
+  const eyeExtras = material.showOutline
+    ? outlineExtras(material.outlineColor, material.eyeOutlineWidth)
+    : ''
+  const glow = material.showGlow
+    ? `<g filter="url(#snapshot-glow)">${path(bodyFillPath, material.glowColor)}</g>`
+    : ''
+  const leftEyePath = scene.leftPath.get()
+  const rightEyePath = scene.rightPath.get()
+  const leftEyeOpacity = scene.leftOpacity.get()
+  const rightEyeOpacity = scene.rightOpacity.get()
+  const ink = material.showBorderlands
+    ? `<g mask="url(#snapshot-ink-rim)">${inkStroke(bodyFillPath, material.outlineColor, material.outlineWidth * 0.28, 1, inkInnerDash)}</g>`
+    : ''
+  const inkRimMask = material.showBorderlands
+    ? `<mask id="snapshot-ink-rim" maskUnits="userSpaceOnUse" x="-200" y="-200" width="400" height="400"><path d="${escapeXml(bodyFillPath)}" fill="#fff"/><g filter="url(#snapshot-ink-erode)"><path d="${escapeXml(bodyFillPath)}" fill="#000"/></g></mask>`
+    : ''
+  const paintOps = look
+    ? buildPaintPlan(scene.paint.get(), paintColorsOf(colors, look.palette), bodyFill)
+    : []
+  const paintLayer = paintOps
+    .map(item =>
+      path(
+        item.path,
+        item.fill,
+        item.opacity,
+        `${item.clip ? ' clip-path="url(#snapshot-head-clip)"' : ''}${item.evenOdd ? ' fill-rule="evenodd"' : ''}`
+      )
+    )
+    .join('')
+  const shades = look ? shadeLayers(look.shading) : []
+  const shadeMasks = shades
+    .map(
+      shade =>
+        `<mask id="snapshot-${shade.kind}" maskUnits="userSpaceOnUse" x="-400" y="-400" width="800" height="800"><path d="${escapeXml(bodyFillPath)}" fill="#fff"/><path d="${escapeXml(bodyFillPath)}" fill="#000" transform="translate(${shade.dx.toFixed(2)} ${shade.dy.toFixed(2)})"/></mask>`
+    )
+    .join('')
+  const shadeLayer = shades
+    .map(shade =>
+      path(bodyFillPath, shade.fill, shade.opacity, ` mask="url(#snapshot-${shade.kind})"`)
+    )
+    .join('')
   const body = [
-    ...backPaths.map(value => path(value, colors.body)),
-    path(headPath, colors.body),
-    `<g clip-path="url(#snapshot-head-clip)">${path(scene.leftPath.get(), colors.eyes, scene.leftOpacity.get())}${path(scene.rightPath.get(), colors.eyes, scene.rightOpacity.get())}</g>`,
-    ...frontPaths.map(value => path(value, colors.body)),
+    glow,
+    path(bodyFillPath, bodyFill, 1, bodyExtras),
+    paintLayer,
+    shadeLayer,
+    `<g clip-path="url(#snapshot-head-clip)">${path(leftEyePath, colors.eyes, leftEyeOpacity, eyeExtras)}${path(rightEyePath, colors.eyes, rightEyeOpacity, eyeExtras)}</g>`,
+    ink,
   ].join('')
-
+  const inkFilter = material.showBorderlands ? ' filter="url(#snapshot-ink)"' : ''
   return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -150 300 300" width="${options.size}" height="${options.size}" role="img" aria-label="${escapeXml(name)}">
-  <defs>${gradientMarkup(options)}<clipPath id="snapshot-head-clip"><path d="${escapeXml(headPath)}"/></clipPath></defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -150 300 300" width="${options.size}" height="${options.size}" role="img" aria-label="${escapeXml(name)}" overflow="visible">
+  <defs>${gradientMarkup(options)}${vectorStyleDefsMarkup('snapshot', material)}${inkRimMask}${shadeMasks}<clipPath id="snapshot-head-clip"><path d="${escapeXml(headPath)}"/></clipPath></defs>
   ${backgroundMarkup(options)}
-  <g transform="translate(${offsetX} ${offsetY})">${body}</g>
+  <g transform="translate(${offsetX} ${offsetY})"${inkFilter}>${body}</g>
 </svg>`
 }
 

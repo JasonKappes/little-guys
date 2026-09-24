@@ -32,9 +32,11 @@ import {
 import {
   type AvatarColors,
   type AvatarEyeDefaults,
+  type AvatarLook,
   type AvatarRenderStyle,
 } from '@/features/avatar/avatars'
 import { type BodyNode } from '@/features/avatar/body'
+import { type BodyLimb } from '@/features/avatar/limbs'
 import { ExpressionPreview } from '@/features/avatar/components/ExpressionWorkspace'
 import { type Expression } from '@/features/avatar/geometry'
 import { type SurfaceConfig } from '@/features/avatar/surfaces'
@@ -43,9 +45,11 @@ export function SequenceWorkspace({
   expressions,
   surface,
   bodyNodes,
+  limbs,
   colors,
   avatarEyes,
   renderStyle,
+  look,
   selectedStepId,
   backButtonRef,
   reduceMotion,
@@ -67,9 +71,11 @@ export function SequenceWorkspace({
   expressions: Expression[]
   surface: SurfaceConfig
   bodyNodes: BodyNode[]
+  limbs?: BodyLimb[]
   colors: AvatarColors
   avatarEyes: AvatarEyeDefaults
   renderStyle: AvatarRenderStyle
+  look: AvatarLook
   selectedStepId: string | null
   backButtonRef: RefObject<HTMLButtonElement | null>
   reduceMotion: boolean
@@ -256,9 +262,11 @@ export function SequenceWorkspace({
                         expression={preset}
                         surface={surface}
                         bodyNodes={bodyNodes}
+                        limbs={limbs}
                         colors={colors}
                         avatarEyes={avatarEyes}
                         renderStyle={renderStyle}
+                        look={look}
                         id={`sequence-${editing.draft.id}-${step.id}`}
                       />
                       <span>{String(expressionIndex).padStart(2, '0')}</span>
@@ -394,9 +402,11 @@ export function SequenceWorkspace({
                     expression={preset}
                     surface={surface}
                     bodyNodes={bodyNodes}
+                    limbs={limbs}
                     colors={colors}
                     avatarEyes={avatarEyes}
                     renderStyle={renderStyle}
+                    look={look}
                     id={`sequence-library-${index}`}
                   />
                   <span>{String(index).padStart(2, '0')}</span>

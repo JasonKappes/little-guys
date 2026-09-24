@@ -6,9 +6,11 @@ import {
   createAvatar,
   defaultAvatarEyes,
   parseAvatarEyeDefaults,
+  parseAvatarLibrary,
   parseAvatarRenderStyle,
   resolveAvatarBehavior,
 } from '@/features/avatar/avatars'
+import { defaultAvatarShading, hexToHsl, hslToHex, suggestPalette } from '@/features/avatar/paint'
 import { initialExpressions } from '@/features/avatar/presets'
 
 describe('avatar eye defaults', () => {
@@ -55,6 +57,70 @@ describe('avatar render style', () => {
       type: 'pixel',
       resolution: 8,
     })
+  })
+
+  it('sanitizes outline, soft shade and glow settings', () => {
+    expect(parseAvatarRenderStyle({ type: 'outline', width: 80 })).toEqual({
+      type: 'outline',
+      width: 18,
+    })
+    expect(parseAvatarRenderStyle({ type: 'softShade', strength: 4 })).toEqual({
+      type: 'softShade',
+      strength: 15,
+    })
+    expect(parseAvatarRenderStyle({ type: 'glow', size: 3 })).toEqual({
+      type: 'glow',
+      size: 4,
+    })
+    expect(
+      parseAvatarRenderStyle({ type: 'borderlands', width: 80, wobble: 0, color: 'red' })
+    ).toEqual({
+      type: 'borderlands',
+      width: 22,
+      wobble: 1,
+      color: '#1a140c',
+    })
+  })
+})
+
+describe('avatar palette and shading', () => {
+  const fallback = { activeAvatarId: 'fallback', avatars: [createAvatar('Fallback')] }
+  const base = { expressions: initialExpressions, sequences: createInitialSequences() }
+
+  it('derives accents for older avatars and sanitizes shading', () => {
+    const library = parseAvatarLibrary(
+      {
+        activeAvatarId: 'a',
+        avatars: [
+          {
+            id: 'a',
+            name: 'Ember',
+            colors: { body: '#e8743b', eyes: '#111316' },
+            shading: { amount: 400, angle: 'left', color: 'blue' },
+          },
+        ],
+      },
+      fallback,
+      base
+    )
+    const [avatar] = library.avatars
+
+    expect(avatar.palette.accent).toMatch(/^#[0-9a-f]{6}$/)
+    expect(avatar.palette.accent).not.toBe(avatar.colors.body)
+    expect(avatar.shading).toEqual({ ...defaultAvatarShading, amount: 100 })
+    expect(avatar.markings).toEqual([])
+  })
+
+  it('suggests harmonies that move the accent hue away from the body', () => {
+    const [bodyHue] = hexToHsl('#5b7fe5')
+    const [accentHue] = hexToHsl(suggestPalette('#5b7fe5', 'complementary').accent)
+    const distance = Math.abs(((accentHue - bodyHue + 540) % 360) - 180)
+
+    expect(distance).toBeGreaterThan(172)
+    expect(hslToHex(...hexToHsl('#5b7fe5'))).toBe('#5b7fe5')
+    expect(suggestPalette('#5b7fe5', 'ember').accent).not.toBe(
+      suggestPalette('#5b7fe5', 'pastel').accent
+    )
   })
 })
 

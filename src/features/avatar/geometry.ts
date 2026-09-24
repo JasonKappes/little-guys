@@ -6,6 +6,24 @@ import {
   type SurfaceConfig,
 } from './surfaces'
 import type { BodyNode } from './body'
+import {
+  insertLimbHandle,
+  limbPaintOf,
+  sampleLimbSpine,
+  type BodyLimb,
+  type LimbPaint,
+  type LimbSpineSample,
+} from './limbs'
+import { renderMarkingLayers, type MarkingLayer } from './decalGeometry'
+import type { Marking } from './markings'
+import type { PaintRef } from './paint'
+import {
+  isMouthPose,
+  mouthOutline,
+  mouthPoseFromShape,
+  type MouthPose,
+  type MouthShape,
+} from './mouth'
 
 export type Quaternion = readonly [number, number, number, number]
 export type Point3 = readonly [number, number, number]
@@ -45,23 +63,45 @@ export type AvatarPose = {
   orientation: Quaternion
 }
 
+export type PartPaintBand = { path: string; paint: PaintRef }
+export type PartPaintLayer = {
+  id: string | null
+  path: string
+  paint: PaintRef
+  bands: PartPaintBand[]
+}
+export type { MarkingLayer }
+
 export type AvatarGeometry = {
   backPaths: string[]
   frontPaths: string[]
   backNodeIds: (string | null)[]
   frontNodeIds: (string | null)[]
   headPath: string
+  bodyFillPath: string
   leftPath: string
   rightPath: string
   leftVisible: boolean
   rightVisible: boolean
+  mouthPath: string
+  mouthVisible: boolean
   wirePaths: string[]
+  backLayers: PartPaintLayer[]
+  frontLayers: PartPaintLayer[]
+  markingLayers: MarkingLayer[]
+  painted: boolean
 }
+
+export const joinBodyFillPath = (headPath: string, backPaths: string[], frontPaths: string[]) =>
+  [headPath, ...backPaths, ...frontPaths].filter(Boolean).join('')
 
 export type RenderAvatarOptions = {
   includeWire?: boolean
   bodyNodes?: BodyNode[]
+  limbs?: BodyLimb[]
+  markings?: readonly Marking[]
   eyeOffset?: Readonly<{ x: number; y: number }>
+  mouth?: MouthShape | MouthPose | null
 }
 
 export type EyeEditorGeometry = {
@@ -403,30 +443,39 @@ export const translateBodyNodeAlongLocalAxis = (
   }
 }
 
+export const projectWorldPoint = (pose: AvatarPose, point: Point3): Point3 =>
+  project(rotateWithQuaternion(pose.orientation, point), pose.expression.perspective)
+
+export const perspectiveScaleAt = (pose: AvatarPose, point: Point3) => {
+  const cameraPosition = rotateWithQuaternion(pose.orientation, point)
+  const denominator = FOCAL_LENGTH - cameraPosition[2] * pose.expression.perspective
+  return Math.abs(denominator) < 0.0001 ? FOCAL_LENGTH / 0.0001 : FOCAL_LENGTH / denominator
+}
+
+export const translatePointInCameraPlane = (
+  point: Point3,
+  pose: AvatarPose,
+  screenDeltaX: number,
+  screenDeltaY: number
+): Point3 => {
+  const scale = perspectiveScaleAt(pose, point)
+  const [w, x, y, z] = pose.orientation
+  const headDelta = rotateWithQuaternion(
+    [w, -x, -y, -z],
+    [screenDeltaX / scale, screenDeltaY / scale, 0]
+  )
+  return [point[0] + headDelta[0], point[1] + headDelta[1], point[2] + headDelta[2]]
+}
+
 export const translateBodyNodeInCameraPlane = (
   node: BodyNode,
   pose: AvatarPose,
   screenDeltaX: number,
   screenDeltaY: number
-): BodyNode => {
-  const cameraPosition = rotateWithQuaternion(pose.orientation, node.position)
-  const denominator = FOCAL_LENGTH - cameraPosition[2] * pose.expression.perspective
-  const perspectiveScale =
-    Math.abs(denominator) < 0.0001 ? FOCAL_LENGTH / 0.0001 : FOCAL_LENGTH / denominator
-  const [w, x, y, z] = pose.orientation
-  const headDelta = rotateWithQuaternion(
-    [w, -x, -y, -z],
-    [screenDeltaX / perspectiveScale, screenDeltaY / perspectiveScale, 0]
-  )
-  return {
-    ...node,
-    position: [
-      node.position[0] + headDelta[0],
-      node.position[1] + headDelta[1],
-      node.position[2] + headDelta[2],
-    ],
-  }
-}
+): BodyNode => ({
+  ...node,
+  position: translatePointInCameraPlane(node.position, pose, screenDeltaX, screenDeltaY),
+})
 
 export const rotateBodyNodeAroundLocalAxis = (
   node: BodyNode,
@@ -547,6 +596,18 @@ const projectFacePoint = (
 ): ProjectedSurfacePoint => {
   const [faceX, faceY] = canonicalFaceCoordinates(x, y)
   return projectLocalSurfacePoint(pose, surfaceFrontSampleAt(surface, faceX, faceY))
+}
+
+const mouthPoints = (
+  pose: AvatarPose,
+  surface: SurfaceConfig,
+  mouth: MouthShape | MouthPose
+): ProjectedSurfacePoint[] => {
+  const mouthPose = isMouthPose(mouth) ? mouth : mouthPoseFromShape(mouth)
+  const centerY = (pose.expression.positionYLeft + pose.expression.positionYRight) / 2 + 44
+  return mouthOutline(mouthPose).map(([localX, localY]) =>
+    projectFacePoint(pose, surface, localX, centerY + localY)
+  )
 }
 
 const eyePoints = (
@@ -1182,6 +1243,172 @@ const accessoryPath = (pose: AvatarPose, node: BodyNode) => {
   return smoothClosedPath(densifyClosedPoints(hull))
 }
 
+const closedCircle = (center: Point3, radius: number, steps = 18) =>
+  path(
+    Array.from({ length: steps }, (_, step) => {
+      const angle = (step / steps) * Math.PI * 2
+      return [
+        center[0] + Math.cos(angle) * radius,
+        center[1] + Math.sin(angle) * radius,
+        center[2],
+      ] as Point3
+    })
+  )
+
+const plantLimbSpine = (samples: LimbSpineSample[]): LimbSpineSample[] => {
+  if (samples.length < 2) return samples
+  const root = samples[0]
+  const next = samples[1]
+  const axis = [
+    root.point[0] - next.point[0],
+    root.point[1] - next.point[1],
+    root.point[2] - next.point[2],
+  ]
+  const length = Math.hypot(axis[0], axis[1], axis[2]) || 1
+  const reach = root.radius * 0.95
+  const planted = [3, 2, 1].map(step => {
+    const amount = step / 3
+    return {
+      point: [
+        root.point[0] + (axis[0] / length) * reach * amount,
+        root.point[1] + (axis[1] / length) * reach * amount,
+        root.point[2] + (axis[2] / length) * reach * amount,
+      ] as Point3,
+      radius: root.radius * (1 + amount * 0.1),
+      t: -amount,
+    }
+  })
+  return [...planted, ...samples]
+}
+
+const limbCircles = (pose: AvatarPose, limb: BodyLimb) => {
+  const samples = plantLimbSpine(sampleLimbSpine(limb, 14))
+  if (samples.length < 2) return []
+  const span = Math.max(1, limb.handles.length - 1)
+  return samples.map(sample => {
+    const point = projectWorldPoint(pose, sample.point)
+    const radius = Math.max(2, sample.radius * perspectiveScaleAt(pose, sample.point))
+    return {
+      progress: sample.t / span,
+      path: closedCircle(point, radius),
+      local: sample.point,
+      depth: rotateWithQuaternion(pose.orientation, sample.point)[2],
+    }
+  })
+}
+
+const insideSurface = (surface: SurfaceConfig, [x, y, z]: Point3) => {
+  const u = Math.abs(x) / (surface.width / 2 || 1)
+  const v = Math.abs(y) / (surface.height / 2 || 1)
+  const w = Math.abs(z) / (surface.depth / 2 || 1)
+  if (surface.type === 'cube') return Math.max(u, v, w) < 1
+  if (surface.type === 'diamond') return u + v + w < 1
+  if (surface.type === 'cylinder') return Math.max(Math.hypot(u, w), v) < 1
+  return u * u + v * v + w * w < 1
+}
+
+const limbPath = (pose: AvatarPose, limb: BodyLimb) =>
+  limbCircles(pose, limb)
+    .map(circle => circle.path)
+    .join('')
+
+const limbBandPaint = (paint: LimbPaint, progress: number) => {
+  const tipStart = paint.tip ? 1 - paint.tipLength : Infinity
+  if (paint.tip && progress >= tipStart) return { key: 'tip', paint: paint.tip }
+  if (paint.rings && progress > 0) {
+    const ringEnd = Math.min(1, tipStart)
+    const band = Math.floor((progress / ringEnd) * paint.ringCount * 2)
+    return band % 2 === 1
+      ? { key: `ring-${band}`, paint: paint.rings }
+      : { key: `base-${band}`, paint: paint.base }
+  }
+  return { key: 'base-0', paint: paint.base }
+}
+
+type LimbCircle = ReturnType<typeof limbCircles>[number]
+
+const limbPaintLayer = (limb: BodyLimb, circles: LimbCircle[]): PartPaintLayer => {
+  const paint = limbPaintOf(limb)
+  const path = circles.map(circle => circle.path).join('')
+  if (!paint.tip && !paint.rings) return { id: limb.id, path, paint: paint.base, bands: [] }
+  const segments: { key: string; paint: PaintRef; paths: string[] }[] = []
+  circles.forEach(circle => {
+    const band = limbBandPaint(paint, circle.progress)
+    const last = segments[segments.length - 1]
+    if (last?.key === band.key) last.paths.push(circle.path)
+    else segments.push({ key: band.key, paint: band.paint, paths: [circle.path] })
+  })
+  return {
+    id: limb.id,
+    path,
+    paint: paint.base,
+    bands: segments
+      .filter((segment, index) => index > 0 || segment.paint !== paint.base)
+      .map(segment => ({ path: segment.paths.join(''), paint: segment.paint })),
+  }
+}
+
+const limbDepthLayers = (pose: AvatarPose, surface: SurfaceConfig, limb: BodyLimb) => {
+  const circles = limbCircles(pose, limb)
+  const isFront = (circle: LimbCircle) =>
+    circle.depth > 0 && !insideSurface(surface, circle.local)
+  const averageDepth = (items: LimbCircle[]) =>
+    items.reduce((total, item) => total + item.depth, 0) / Math.max(1, items.length)
+  const front = circles.filter(isFront)
+  const back = circles.filter(circle => !isFront(circle))
+  return [
+    ...(back.length
+      ? [{ paint: limbPaintLayer(limb, back), depth: averageDepth(back), front: false }]
+      : []),
+    ...(front.length
+      ? [{ paint: limbPaintLayer(limb, front), depth: averageDepth(front), front: true }]
+      : []),
+  ]
+}
+
+export type LimbEditorGeometry = {
+  path: string
+  spine: string
+  handles: Array<{
+    id: string
+    point: Point3
+    radius: number
+  }>
+}
+
+export const renderLimbEditor = (pose: AvatarPose, limb: BodyLimb): LimbEditorGeometry => ({
+  path: limbPath(pose, limb),
+  spine: path(
+    sampleLimbSpine(limb, 8).map(sample => projectWorldPoint(pose, sample.point)),
+    false
+  ),
+  handles: limb.handles.map(item => ({
+    id: item.id,
+    point: projectWorldPoint(pose, item.point),
+    radius: item.radius * perspectiveScaleAt(pose, item.point),
+  })),
+})
+
+export const insertLimbHandleAtScreen = (
+  limb: BodyLimb,
+  pose: AvatarPose,
+  screen: readonly [number, number]
+): BodyLimb | null => {
+  const samples = sampleLimbSpine(limb, 12)
+  let hit: LimbSpineSample | undefined
+  let closestDistance = 16
+  for (const sample of samples) {
+    const projected = projectWorldPoint(pose, sample.point)
+    const distance = Math.hypot(projected[0] - screen[0], projected[1] - screen[1])
+    if (distance < closestDistance) {
+      hit = sample
+      closestDistance = distance
+    }
+  }
+  if (!hit) return null
+  return insertLimbHandle(limb, hit.point, hit.radius, Math.floor(hit.t))
+}
+
 const ACCESSORY_FRONT_CROSSING_RATIO = 0.1
 
 const accessoryCameraDepthRadius = (pose: AvatarPose, node: BodyNode) => {
@@ -1206,25 +1433,36 @@ const accessoryCameraDepthRadius = (pose: AvatarPose, node: BodyNode) => {
   )
 }
 
-const accessoryLayers = (pose: AvatarPose, nodes: BodyNode[]) => {
-  const layers = nodes
-    .map(node => {
-      const depth = rotateWithQuaternion(pose.orientation, node.position)[2]
-      return {
-        id: node.id,
-        path: accessoryPath(pose, node),
-        depth,
-        front: depth > accessoryCameraDepthRadius(pose, node) * ACCESSORY_FRONT_CROSSING_RATIO,
-      }
-    })
-    .sort((left, right) => left.depth - right.depth)
+const accessoryLayers = (
+  pose: AvatarPose,
+  surface: SurfaceConfig,
+  nodes: BodyNode[],
+  limbs: BodyLimb[]
+) => {
+  const nodeLayers = nodes.map(node => {
+    const depth = rotateWithQuaternion(pose.orientation, node.position)[2]
+    const path = accessoryPath(pose, node)
+    return {
+      paint: { id: node.id, path, paint: node.paint ?? 'body', bands: [] } as PartPaintLayer,
+      depth,
+      front: depth > accessoryCameraDepthRadius(pose, node) * ACCESSORY_FRONT_CROSSING_RATIO,
+    }
+  })
+  const limbLayers = limbs.flatMap(limb => limbDepthLayers(pose, surface, limb))
+  const layers = [...nodeLayers, ...limbLayers].sort((left, right) => left.depth - right.depth)
+  const back = layers.filter(layer => !layer.front).map(layer => layer.paint)
+  const front = layers.filter(layer => layer.front).map(layer => layer.paint)
   return {
-    backPaths: layers.filter(layer => !layer.front).map(layer => layer.path),
-    frontPaths: layers.filter(layer => layer.front).map(layer => layer.path),
-    backNodeIds: layers.filter(layer => !layer.front).map(layer => layer.id),
-    frontNodeIds: layers.filter(layer => layer.front).map(layer => layer.id),
+    backLayers: back,
+    frontLayers: front,
+    backPaths: back.map(layer => layer.path),
+    frontPaths: front.map(layer => layer.path),
+    backNodeIds: back.map(layer => layer.id),
+    frontNodeIds: front.map(layer => layer.id),
   }
 }
+
+const isLayerPainted = (layer: PartPaintLayer) => layer.paint !== 'body' || layer.bands.length > 0
 
 export const renderAvatar = (
   pose: AvatarPose,
@@ -1236,18 +1474,48 @@ export const renderAvatar = (
   const rightSamples = eyePoints(pose, surface, 1, blink, options.eyeOffset)
   const left = leftSamples.map(sample => sample.point)
   const right = rightSamples.map(sample => sample.point)
-  const accessories = accessoryLayers(pose, options.bodyNodes ?? [])
+  const mouthSamples = options.mouth ? mouthPoints(pose, surface, options.mouth) : []
+  const accessories = accessoryLayers(
+    pose,
+    surface,
+    options.bodyNodes ?? [],
+    options.limbs ?? []
+  )
   const compositePaths = compositeBackPaths(pose, surface)
+  const head = headPath(pose, surface)
+  const back = [...compositePaths, ...accessories.backPaths]
+  const front = accessories.frontPaths
+  const backLayers: PartPaintLayer[] = [
+    ...compositePaths.map(item => ({ id: null, path: item, paint: 'body' as const, bands: [] })),
+    ...accessories.backLayers,
+  ]
+  const markingLayers = options.markings?.length
+    ? renderMarkingLayers(options.markings, surface, sample =>
+        projectLocalSurfacePoint(pose, sample)
+      )
+    : []
   return {
-    backPaths: [...compositePaths, ...accessories.backPaths],
-    frontPaths: accessories.frontPaths,
+    backPaths: back,
+    frontPaths: front,
     backNodeIds: [...compositePaths.map(() => null), ...accessories.backNodeIds],
     frontNodeIds: accessories.frontNodeIds,
-    headPath: headPath(pose, surface),
+    backLayers,
+    frontLayers: accessories.frontLayers,
+    markingLayers,
+    painted:
+      markingLayers.length > 0 ||
+      backLayers.some(isLayerPainted) ||
+      accessories.frontLayers.some(isLayerPainted),
+    headPath: head,
+    bodyFillPath: joinBodyFillPath(head, back, front),
     leftPath: path(left),
     rightPath: path(right),
     leftVisible: leftSamples.reduce((total, sample) => total + sample.normal[2], 0) > 0,
     rightVisible: rightSamples.reduce((total, sample) => total + sample.normal[2], 0) > 0,
+    mouthPath: path(mouthSamples.map(sample => sample.point)),
+    mouthVisible: mouthSamples.length
+      ? mouthSamples.reduce((total, sample) => total + sample.normal[2], 0) > 0
+      : false,
     wirePaths: options.includeWire === false ? [] : wirePaths(pose, surface),
   }
 }

@@ -1,8 +1,8 @@
-# Avatar Lab Context
+# little guys Context
 
 ## Purpose
 
-Bible Strong Avatar Lab is a browser-based authoring tool for procedural 2D avatars. It combines
+little guys is a browser-based authoring tool for procedural 2D avatars. It combines
 3D-inspired geometry with SVG rendering so creators can build a body from primitives, define a
 neutral face, author expressions and compose reusable animations. Generated packages do not depend
 on the Studio UI.
@@ -12,6 +12,17 @@ on the Studio UI.
 ### Avatar
 
 A reusable character whose body, colors and neutral eyes define its persistent visual identity.
+
+### Look
+
+The colorable layer of an Avatar's neutral appearance: a palette of two accent colors, part
+colors on secondary primitives and limbs, markings on the primary surface, and cartoon shading.
+Colorable things reference a paint role (body, accent, accent 2, eyes) or a custom hex.
+
+### Marking
+
+A decal, spot scatter or stripe set placed by direction on the primary surface. Markings wrap with
+the 3D surface and are clipped to the primary head.
 
 ### Neutral appearance
 
@@ -58,6 +69,8 @@ manipulation pauses it.
 - Expressions remain compatible across body surfaces because they operate in the common facial frame.
 - `features/avatar/geometry.ts` and the exported procedural engine stay independent from React.
 - `features/studio/defaultStudioDocument.json` is the current schema baseline; pre-release legacy migrations are not required.
+- A document whose look version is older than the bundled one lets bundled Avatars without any Look customization adopt the bundled Look once; shape, colors and behavior are kept.
+- Every renderer (stage, previews, pixel, snapshot, standalone runtime) draws the Look through `features/rendering/paintPlan.ts` so they stay identical.
 - Live editing may update the preview, but unsaved avatar/expression edits must remain reversible.
 
 ## Architecture boundaries

@@ -48,14 +48,39 @@ import {
 } from '@/app/components/common'
 import { ColorField, LinkButton, NumericField } from '@/app/components/controls'
 import { formatSeconds, scaleSurface, type Side, type SnapshotFormat } from '@/app/studio-utils'
+import {
+  isTalkLanguage,
+  isTalkSpeed,
+  isTalkStyle,
+  talkStyleLabels,
+  talkStylesForLanguage,
+} from '@/features/studio/azureSpeech'
 import { SequenceWorkspace } from '@/features/animation/components/SequenceWorkspace'
 import { findExpressionIndex, groupSequences } from '@/features/animation/sequences'
 import {
+  createAvatarRenderStyle,
   defaultAvatarEyes,
-  defaultPixelRenderStyle,
   type AvatarRenderStyle,
 } from '@/features/avatar/avatars'
+import {
+  borderlandsWidthRange,
+  borderlandsWobbleRange,
+  glowSizeRange,
+  outlineWidthRange,
+  softShadeStrengthRange,
+} from '@/features/rendering/vectorMaterials'
 import { bodyPrimitiveTypes, MAX_BODY_NODES } from '@/features/avatar/body'
+import {
+  bodyLimbKindLabels,
+  bodyLimbLabels,
+  bodyLimbPresetIds,
+  insertLimbHandleOnLongestSpan,
+  MAX_BODY_LIMBS,
+  MAX_LIMB_HANDLES,
+  removeLimbHandle,
+  setLimbHandleRadius,
+  limbRadiusRange,
+} from '@/features/avatar/limbs'
 import {
   ExpressionCard,
   ExpressionPreview,
@@ -66,6 +91,14 @@ import { defaultExpression } from '@/features/avatar/presets'
 import { surfaceLabels, surfacePresets } from '@/features/avatar/surfaces'
 import { type SnapshotBackground } from '@/features/export/snapshotExporter'
 import { AvatarPage } from '@/features/studio/components/AvatarDrawer'
+import {
+  LimbPaintEditor,
+  MarkingsPanel,
+  NodePaintEditor,
+  PalettePanel,
+  ShadingPanel,
+} from '@/features/studio/components/AvatarLookPanels'
+import { paintColorsOf } from '@/features/rendering/paintPlan'
 import { StudioIdentity } from '@/features/studio/components/StudioIdentity'
 import type { StudioController } from '@/features/studio/useStudioController'
 
@@ -79,6 +112,7 @@ export function StudioInspector({ controller }: { controller: StudioController }
     activeSequence,
     activeSequenceLabel,
     activeState,
+    addBodyLimb,
     addBodyNode,
     avatarDragOrigin,
     avatarDragPreview,
@@ -97,7 +131,9 @@ export function StudioInspector({ controller }: { controller: StudioController }
     commitExpressionMove,
     commitStateMove,
     createNewAvatar,
+    commitLimb,
     deleteSelectedBodyNode,
+    deleteSelectedLimb,
     downloadAvatarExport,
     downloadStudioProject,
     draggedAvatarId,
@@ -109,6 +145,7 @@ export function StudioInspector({ controller }: { controller: StudioController }
     duplicateAvatar,
     duplicateExpression,
     duplicateSelectedBodyNode,
+    duplicateSelectedLimb,
     duplicateSequenceEditing,
     duplicateState,
     editing,
@@ -123,6 +160,7 @@ export function StudioInspector({ controller }: { controller: StudioController }
     focusAvatarName,
     language,
     launchSequence,
+    limbs,
     linked,
     mode,
     openExpressionEditor,
@@ -145,7 +183,10 @@ export function StudioInspector({ controller }: { controller: StudioController }
     saveEditing,
     saveSequenceEditing,
     selectBodyNode,
+    selectLimb,
     selectedBodyNode,
+    selectedLimb,
+    selectedLimbId,
     selectedBodyNodeId,
     selectedExportAnimations,
     selectedSequenceStepId,
@@ -188,11 +229,42 @@ export function StudioInspector({ controller }: { controller: StudioController }
     stopState,
     surface,
     t,
+    talkError,
+    talkKey,
+    talkLanguage,
+    talkRegion,
+    talkSpeed,
+    talkStatus,
+    talkStyle,
+    talkText,
+    playTalk,
+    setTalkKey,
+    setTalkRegion,
+    stopTalk,
+    updateTalkLanguage,
+    updateTalkSpeed,
+    updateTalkStyle,
+    updateTalkText,
     toggleExportAnimation,
     toggleStatePlayback,
+    stageBackground,
     transitionToExpression,
+    updateStageBackground,
     updateAvatarColors,
     updateAvatarRenderStyle,
+    updateAvatarPalette,
+    applyPaletteHarmony,
+    randomizeAvatarPalette,
+    updateAvatarShading,
+    selectedMarkingId,
+    setSelectedMarkingId,
+    addMarking,
+    updateMarking,
+    deleteMarking,
+    duplicateSelectedMarking,
+    moveMarking,
+    updateSelectedLimbPaint,
+    updateSelectedBodyNodePaint,
     updateAvatarEyeDimension,
     updateAvatarEyePosition,
     updateAvatarEyeSize,
@@ -210,6 +282,14 @@ export function StudioInspector({ controller }: { controller: StudioController }
   } = controller
   const pixelRenderStyle =
     activeAvatar.renderStyle.type === 'pixel' ? activeAvatar.renderStyle : null
+  const outlineRenderStyle =
+    activeAvatar.renderStyle.type === 'outline' ? activeAvatar.renderStyle : null
+  const softShadeRenderStyle =
+    activeAvatar.renderStyle.type === 'softShade' ? activeAvatar.renderStyle : null
+  const glowRenderStyle = activeAvatar.renderStyle.type === 'glow' ? activeAvatar.renderStyle : null
+  const borderlandsRenderStyle =
+    activeAvatar.renderStyle.type === 'borderlands' ? activeAvatar.renderStyle : null
+  const lookColors = paintColorsOf(activeAvatar.colors, activeAvatar.palette)
   const playbackFooterY = useMotionValue(0)
   const playbackHandleY = useMotionValue(0)
   const playbackHandleCounterY = useTransform(playbackHandleY, value => -value)
@@ -294,9 +374,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
               expressions={expressions}
               surface={surface}
               bodyNodes={bodyNodes}
+              limbs={limbs}
               colors={activeAvatar.colors}
               avatarEyes={activeAvatarEyes}
               renderStyle={activeAvatar.renderStyle}
+              look={activeAvatar}
               selectedStepId={selectedSequenceStepId}
               backButtonRef={workspaceBackButtonRef}
               reduceMotion={Boolean(reduceMotion)}
@@ -467,6 +549,21 @@ export function StudioInspector({ controller }: { controller: StudioController }
                               </span>
                             </Button>
                           ))}
+                          {limbs.map(limb => (
+                            <Button
+                              variant="outline"
+                              type="button"
+                              key={limb.id}
+                              aria-pressed={selectedLimbId === limb.id}
+                              onClick={() => selectLimb(limb.id)}
+                            >
+                              <span className="body-node-icon body-node-icon-limb" />
+                              <span>
+                                <strong>{t(limb.name)}</strong>
+                                <small>{t(bodyLimbKindLabels[limb.kind])}</small>
+                              </span>
+                            </Button>
+                          ))}
                         </div>
                         <div className="body-add">
                           <span>
@@ -488,6 +585,107 @@ export function StudioInspector({ controller }: { controller: StudioController }
                             ))}
                           </div>
                         </div>
+                        <div className="body-add">
+                          <span>
+                            {t('Ajouter une partie')} · {limbs.length}/{MAX_BODY_LIMBS}
+                          </span>
+                          <div>
+                            {bodyLimbPresetIds.map(preset => (
+                              <Button
+                                className="surface-card body-add-card"
+                                variant="outline"
+                                type="button"
+                                key={preset}
+                                disabled={limbs.length >= MAX_BODY_LIMBS}
+                                onClick={() => addBodyLimb(preset)}
+                              >
+                                <span className={`limb-preset-mark limb-preset-${preset}`} />
+                                <span>{t(bodyLimbLabels[preset])}</span>
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                        {selectedLimb && (
+                          <div className="body-node-editor">
+                            <div className="body-node-actions">
+                              <strong>{t(selectedLimb.name)}</strong>
+                              <div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  type="button"
+                                  disabled={limbs.length >= MAX_BODY_LIMBS}
+                                  onClick={duplicateSelectedLimb}
+                                >
+                                  {t('Dupliquer')}
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  type="button"
+                                  onClick={deleteSelectedLimb}
+                                >
+                                  {t('Supprimer')}
+                                </Button>
+                              </div>
+                            </div>
+                            <LimbPaintEditor
+                              paint={selectedLimb.paint}
+                              colors={lookColors}
+                              onChange={updateSelectedLimbPaint}
+                            />
+                            <p className="body-gizmo-help">
+                              <Badge variant="outline">{t('Points de forme')}</Badge>
+                              {t(
+                                'Glisse un point pour plier la partie. Glisse l’anneau pour changer l’épaisseur. Clique la partie pour ajouter un point.'
+                              )}
+                            </p>
+                            <div className="surface-fields">
+                              {selectedLimb.handles.map((handle, index) => (
+                                <NumericField
+                                  key={handle.id}
+                                  label={`${t('Épaisseur')} ${index + 1}`}
+                                  value={handle.radius}
+                                  min={limbRadiusRange.min}
+                                  max={limbRadiusRange.max}
+                                  onChange={value =>
+                                    commitLimb(setLimbHandleRadius(selectedLimb, handle.id, value))
+                                  }
+                                />
+                              ))}
+                            </div>
+                            <div className="body-node-actions">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                type="button"
+                                disabled={selectedLimb.handles.length >= MAX_LIMB_HANDLES}
+                                onClick={() =>
+                                  commitLimb(insertLimbHandleOnLongestSpan(selectedLimb))
+                                }
+                              >
+                                {t('Ajouter un point')}
+                              </Button>
+                              {selectedLimb.handles.length > 2 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  type="button"
+                                  onClick={() =>
+                                    commitLimb(
+                                      removeLimbHandle(
+                                        selectedLimb,
+                                        selectedLimb.handles[selectedLimb.handles.length - 2].id
+                                      )
+                                    )
+                                  }
+                                >
+                                  {t('Retirer un point')}
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         {selectedBodyNode && (
                           <div className="body-node-editor">
                             <div className="body-node-actions">
@@ -512,6 +710,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                                 </Button>
                               </div>
                             </div>
+                            <NodePaintEditor
+                              paint={selectedBodyNode.paint}
+                              colors={lookColors}
+                              onChange={updateSelectedBodyNodePaint}
+                            />
                             <p className="body-gizmo-help">
                               <Badge variant="outline">{t('Gizmo local')}</Badge>
                               {t(
@@ -798,7 +1001,38 @@ export function StudioInspector({ controller }: { controller: StudioController }
                           value={activeAvatar.colors.body}
                           onChange={body => updateAvatarColors({ body })}
                         />
+                        <ColorField
+                          label="Scène"
+                          value={stageBackground}
+                          onChange={updateStageBackground}
+                        />
                       </InspectorCard>
+                    </ControlSection>
+                    <ControlSection
+                      title="Couleurs et motifs"
+                      subtitle="Palette, couleurs des parties, motifs 3D et ombrage cartoon."
+                    >
+                      <PalettePanel
+                        body={activeAvatar.colors.body}
+                        palette={activeAvatar.palette}
+                        colors={lookColors}
+                        onBodyChange={body => updateAvatarColors({ body })}
+                        onPaletteChange={updateAvatarPalette}
+                        onHarmony={applyPaletteHarmony}
+                        onRandomize={randomizeAvatarPalette}
+                      />
+                      <MarkingsPanel
+                        markings={activeAvatar.markings}
+                        selectedId={selectedMarkingId}
+                        colors={lookColors}
+                        onSelect={setSelectedMarkingId}
+                        onAdd={addMarking}
+                        onChange={updateMarking}
+                        onDelete={deleteMarking}
+                        onDuplicate={duplicateSelectedMarking}
+                        onMove={moveMarking}
+                      />
+                      <ShadingPanel shading={activeAvatar.shading} onChange={updateAvatarShading} />
                     </ControlSection>
                     <ControlSection
                       title="Rendu"
@@ -808,7 +1042,7 @@ export function StudioInspector({ controller }: { controller: StudioController }
                         <PanelTitle
                           level={3}
                           title="Type de rendu"
-                          subtitle="Pixel utilise une palette franche, sans lissage ni couleur intermédiaire."
+                          subtitle="Chaque style change la finition, pas la forme."
                         />
                         <Field className="render-style-field" orientation="horizontal">
                           <FieldTitle>{t('Style')}</FieldTitle>
@@ -816,15 +1050,17 @@ export function StudioInspector({ controller }: { controller: StudioController }
                             value={activeAvatar.renderStyle.type}
                             items={[
                               { value: 'vector', label: t('Vectoriel') },
+                              { value: 'outline', label: t('Contour') },
+                              { value: 'borderlands', label: t('Borderlands') },
+                              { value: 'softShade', label: t('Ombre douce') },
+                              { value: 'glow', label: t('Lueur') },
                               { value: 'pixel', label: t('Pixel') },
                             ]}
                             onValueChange={next => {
                               if (!next) return
-                              const renderStyle: AvatarRenderStyle =
-                                next === 'pixel'
-                                  ? { ...defaultPixelRenderStyle }
-                                  : { type: 'vector' }
-                              updateAvatarRenderStyle(renderStyle)
+                              updateAvatarRenderStyle(
+                                createAvatarRenderStyle(next as AvatarRenderStyle['type'])
+                              )
                             }}
                           >
                             <SelectTrigger aria-label={t('Type de rendu')}>
@@ -832,6 +1068,10 @@ export function StudioInspector({ controller }: { controller: StudioController }
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="vector">{t('Vectoriel')}</SelectItem>
+                              <SelectItem value="outline">{t('Contour')}</SelectItem>
+                              <SelectItem value="borderlands">{t('Borderlands')}</SelectItem>
+                              <SelectItem value="softShade">{t('Ombre douce')}</SelectItem>
+                              <SelectItem value="glow">{t('Lueur')}</SelectItem>
                               <SelectItem value="pixel">{t('Pixel')}</SelectItem>
                             </SelectContent>
                           </Select>
@@ -849,6 +1089,98 @@ export function StudioInspector({ controller }: { controller: StudioController }
                                 updateAvatarRenderStyle({
                                   ...pixelRenderStyle,
                                   resolution: Math.round(resolution),
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                        {outlineRenderStyle && (
+                          <div className="pixel-render-options">
+                            <NumericField
+                              label="Épaisseur du contour"
+                              value={outlineRenderStyle.width}
+                              min={outlineWidthRange.min}
+                              max={outlineWidthRange.max}
+                              step={1}
+                              onChange={width =>
+                                updateAvatarRenderStyle({
+                                  ...outlineRenderStyle,
+                                  width,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                        {borderlandsRenderStyle && (
+                          <div className="pixel-render-options">
+                            <ColorField
+                              label="Encre"
+                              value={borderlandsRenderStyle.color}
+                              onChange={color =>
+                                updateAvatarRenderStyle({
+                                  ...borderlandsRenderStyle,
+                                  color,
+                                })
+                              }
+                            />
+                            <NumericField
+                              label="Épaisseur de l’encre"
+                              value={borderlandsRenderStyle.width}
+                              min={borderlandsWidthRange.min}
+                              max={borderlandsWidthRange.max}
+                              step={1}
+                              onChange={width =>
+                                updateAvatarRenderStyle({
+                                  ...borderlandsRenderStyle,
+                                  width,
+                                })
+                              }
+                            />
+                            <NumericField
+                              label="Irrégularité"
+                              value={borderlandsRenderStyle.wobble}
+                              min={borderlandsWobbleRange.min}
+                              max={borderlandsWobbleRange.max}
+                              step={1}
+                              onChange={wobble =>
+                                updateAvatarRenderStyle({
+                                  ...borderlandsRenderStyle,
+                                  wobble,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                        {softShadeRenderStyle && (
+                          <div className="pixel-render-options">
+                            <NumericField
+                              label="Intensité de l’ombre"
+                              value={softShadeRenderStyle.strength}
+                              min={softShadeStrengthRange.min}
+                              max={softShadeStrengthRange.max}
+                              step={1}
+                              unit="%"
+                              onChange={strength =>
+                                updateAvatarRenderStyle({
+                                  ...softShadeRenderStyle,
+                                  strength,
+                                })
+                              }
+                            />
+                          </div>
+                        )}
+                        {glowRenderStyle && (
+                          <div className="pixel-render-options">
+                            <NumericField
+                              label="Taille de la lueur"
+                              value={glowRenderStyle.size}
+                              min={glowSizeRange.min}
+                              max={glowSizeRange.max}
+                              step={1}
+                              onChange={size =>
+                                updateAvatarRenderStyle({
+                                  ...glowRenderStyle,
+                                  size,
                                 })
                               }
                             />
@@ -1075,6 +1407,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                           value={expression.bodyColor ?? activeAvatar.colors.body}
                           onChange={bodyColor => updateImmediate({ ...expression, bodyColor })}
                         />
+                        <ColorField
+                          label="Scène"
+                          value={stageBackground}
+                          onChange={updateStageBackground}
+                        />
                         {expression.bodyColor && (
                           <Button
                             className="inherit-colors"
@@ -1118,6 +1455,166 @@ export function StudioInspector({ controller }: { controller: StudioController }
                           onActiveChange={active => updateHighlight(active ? 'head' : null)}
                           onChange={value => updateImmediate({ ...expression, headZ: value })}
                         />
+                      </InspectorCard>
+                    </ControlSection>
+                    <ControlSection
+                      title="Parole"
+                      subtitle="Génère la voix, puis lance la phrase pour bouger la bouche."
+                    >
+                      <InspectorCard className="talk-panel">
+                        <PanelTitle
+                          level={3}
+                          title="Azure Speech"
+                          subtitle="La clé reste dans cette session et n’est pas enregistrée."
+                        />
+                        <Field>
+                          <FieldTitle>{t('Clé Azure')}</FieldTitle>
+                          <Input
+                            type="password"
+                            autoComplete="off"
+                            spellCheck={false}
+                            value={talkKey}
+                            placeholder={t('Colle ta clé Azure Speech.')}
+                            onChange={event => setTalkKey(event.currentTarget.value)}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldTitle>{t('Région Azure')}</FieldTitle>
+                          <Input
+                            spellCheck={false}
+                            value={talkRegion}
+                            placeholder="eastus"
+                            onChange={event => setTalkRegion(event.currentTarget.value)}
+                          />
+                        </Field>
+                        <Field>
+                          <FieldTitle>{t('Phrase')}</FieldTitle>
+                          <textarea
+                            className="talk-text"
+                            rows={4}
+                            value={talkText}
+                            placeholder={t('Écris ce que l’avatar doit dire.')}
+                            onChange={event => updateTalkText(event.currentTarget.value)}
+                          />
+                        </Field>
+                        <div className="talk-controls">
+                          <Field>
+                            <FieldTitle>{t('Langue')}</FieldTitle>
+                            <Select
+                              value={talkLanguage}
+                              items={[
+                                { value: 'english', label: t('Anglais') },
+                                { value: 'spanish', label: t('Espagnol') },
+                              ]}
+                              onValueChange={next => {
+                                if (typeof next === 'string' && isTalkLanguage(next)) {
+                                  updateTalkLanguage(next)
+                                }
+                              }}
+                            >
+                              <SelectTrigger aria-label={t('Langue')}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="english">{t('Anglais')}</SelectItem>
+                                <SelectItem value="spanish">{t('Espagnol')}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field>
+                            <FieldTitle>{t('Vitesse')}</FieldTitle>
+                            <Select
+                              value={talkSpeed}
+                              items={[
+                                { value: 'slow', label: t('Lent') },
+                                { value: 'easy', label: t('Posé') },
+                                { value: 'normal', label: t('Normal') },
+                                { value: 'fast', label: t('Vite') },
+                              ]}
+                              onValueChange={next => {
+                                if (typeof next === 'string' && isTalkSpeed(next)) {
+                                  updateTalkSpeed(next)
+                                }
+                              }}
+                            >
+                              <SelectTrigger aria-label={t('Vitesse')}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="slow">{t('Lent')}</SelectItem>
+                                <SelectItem value="easy">{t('Posé')}</SelectItem>
+                                <SelectItem value="normal">{t('Normal')}</SelectItem>
+                                <SelectItem value="fast">{t('Vite')}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          <Field>
+                            <FieldTitle>{t('Ton')}</FieldTitle>
+                            <Select
+                              value={talkStyle}
+                              items={talkStylesForLanguage(talkLanguage).map(style => ({
+                                value: style,
+                                label: t(talkStyleLabels[style]),
+                              }))}
+                              onValueChange={next => {
+                                if (typeof next === 'string' && isTalkStyle(next)) {
+                                  updateTalkStyle(next)
+                                }
+                              }}
+                            >
+                              <SelectTrigger aria-label={t('Ton')}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {talkStylesForLanguage(talkLanguage).map(style => (
+                                  <SelectItem key={style} value={style}>
+                                    {t(talkStyleLabels[style])}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                        </div>
+                        <div className="talk-actions">
+                          <Button
+                            type="button"
+                            disabled={talkStatus === 'generating'}
+                            onClick={() => void playTalk()}
+                          >
+                            <Play />
+                            {t('Lire')}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            type="button"
+                            disabled={talkStatus !== 'talking'}
+                            onClick={stopTalk}
+                          >
+                            {t('Arrêter')}
+                          </Button>
+                        </div>
+                        {talkStatus !== 'idle' && (
+                          <p className="talk-status">
+                            {talkStatus === 'generating'
+                              ? t('Génération…')
+                              : talkStatus === 'talking'
+                                ? t('En train de parler')
+                                : t('Prêt')}
+                          </p>
+                        )}
+                        {talkError && (
+                          <p className="talk-error">
+                            {t(
+                              talkError === 'missing-key'
+                                ? 'Colle ta clé Azure Speech.'
+                                : talkError === 'missing-region'
+                                  ? 'Indique la région, par exemple eastus.'
+                                  : talkError === 'missing-text'
+                                    ? 'Écris ce que l’avatar doit dire.'
+                                    : 'La synthèse a échoué.'
+                            )}
+                          </p>
+                        )}
                       </InspectorCard>
                     </ControlSection>
                     <ControlSection
@@ -1411,9 +1908,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                           active={activeExpression === index}
                           surface={surface}
                           bodyNodes={bodyNodes}
+                          limbs={limbs}
                           colors={activeAvatar.colors}
                           avatarEyes={activeAvatarEyes}
                           renderStyle={activeAvatar.renderStyle}
+                          look={activeAvatar}
                           previewId={String(index)}
                           onSelect={() => transitionToExpression(preset, index)}
                           onEdit={() => openExpressionEditor(index, preset)}
@@ -1558,9 +2057,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                                   }
                                   surface={surface}
                                   bodyNodes={bodyNodes}
+                                  limbs={limbs}
                                   colors={activeAvatar.colors}
                                   avatarEyes={activeAvatarEyes}
                                   renderStyle={activeAvatar.renderStyle}
+                                  look={activeAvatar}
                                   id={`state-card-${sequence.id}`}
                                 />
                                 <span>{sequence.builtIn ? t(sequence.name) : sequence.name}</span>
@@ -1642,9 +2143,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                         expression={expressions[0] ?? defaultExpression}
                         surface={activeAvatar.body.primary}
                         bodyNodes={activeAvatar.body.nodes}
+                        limbs={activeAvatar.body.limbs}
                         colors={activeAvatar.colors}
                         avatarEyes={activeAvatarEyes}
                         renderStyle={activeAvatar.renderStyle}
+                        look={activeAvatar}
                         id={`export-avatar-${activeAvatar.id}`}
                       />
                       <div>
@@ -1733,9 +2236,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                               expression={firstExpression ?? expressions[0] ?? defaultExpression}
                               surface={surface}
                               bodyNodes={bodyNodes}
+                              limbs={limbs}
                               colors={activeAvatar.colors}
                               avatarEyes={activeAvatarEyes}
                               renderStyle={activeAvatar.renderStyle}
+                              look={activeAvatar}
                               id={`export-animation-${animation.id}`}
                             />
                             <span>{animation.builtIn ? t(animation.name) : animation.name}</span>
@@ -1773,6 +2278,7 @@ export function StudioInspector({ controller }: { controller: StudioController }
                       colorFrom={snapshotColorFrom}
                       colorTo={snapshotColorTo}
                       renderStyle={activeAvatar.renderStyle}
+                      look={activeAvatar}
                     />
                     <div>
                       <small>{t('Aperçu du mode photo')}</small>
@@ -1981,9 +2487,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                         expression={preset}
                         surface={surface}
                         bodyNodes={bodyNodes}
+                        limbs={limbs}
                         colors={activeAvatar.colors}
                         avatarEyes={activeAvatarEyes}
                         renderStyle={activeAvatar.renderStyle}
+                        look={activeAvatar}
                         id={`player-${activeSequence.id}-${position}`}
                       />
                       {playbackVisual.position === position && (
@@ -2084,9 +2592,11 @@ export function StudioInspector({ controller }: { controller: StudioController }
                 expression={expressions[0] ?? defaultExpression}
                 surface={activeAvatar.body.primary}
                 bodyNodes={activeAvatar.body.nodes}
+                limbs={activeAvatar.body.limbs}
                 colors={activeAvatar.colors}
                 avatarEyes={activeAvatarEyes}
                 renderStyle={activeAvatar.renderStyle}
+                look={activeAvatar}
                 id={`active-avatar-tab-${activeAvatar.id}`}
               />
               <span>{activeAvatar.name}</span>

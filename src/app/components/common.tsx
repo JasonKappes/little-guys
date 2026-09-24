@@ -1,5 +1,4 @@
 import { Pause, Play, Square } from 'lucide-react'
-import { motion } from 'motion/react'
 import { useId } from 'react'
 
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
@@ -12,6 +11,8 @@ import { type PlaybackStatus } from '@/app/studio-utils'
 import type { AvatarRenderStyle } from '@/features/avatar/avatars'
 import { type SnapshotBackground } from '@/features/export/snapshotExporter'
 import { LivePixelAvatarCanvas } from '@/features/rendering/components/PixelAvatarCanvas'
+import { VectorAvatarGraphic } from '@/features/rendering/components/VectorAvatarGraphic'
+import { type PaintLook } from '@/features/rendering/paintPlan'
 import { type RenderedColors, type RenderedScene } from '@/features/rendering/renderedScene'
 export function ControlSection({
   title,
@@ -44,6 +45,7 @@ export function SnapshotPreview({
   colorFrom,
   colorTo,
   renderStyle,
+  look,
 }: {
   scene: RenderedScene
   colors: RenderedColors
@@ -51,9 +53,9 @@ export function SnapshotPreview({
   colorFrom: string
   colorTo: string
   renderStyle: AvatarRenderStyle
+  look: PaintLook
 }) {
   const id = useId().replace(/:/g, '')
-  const clipId = `${id}-clip`
   const linearId = `${id}-linear`
   const radialId = `${id}-radial`
   const backgroundFill =
@@ -81,40 +83,45 @@ export function SnapshotPreview({
           scene={scene}
           colors={colors}
           style={renderStyle}
+          look={look}
           className="avatar-preview"
         />
       ) : (
-        <svg className="avatar-preview" viewBox="-150 -150 300 300" aria-hidden="true">
-          <defs>
-            <clipPath id={clipId}>
-              <motion.path d={scene.headPath} />
-            </clipPath>
-            <linearGradient id={linearId} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor={colorFrom} />
-              <stop offset="1" stopColor={colorTo} />
-            </linearGradient>
-            <radialGradient id={radialId} cx="50%" cy="42%" r="70%">
-              <stop offset="0" stopColor={colorFrom} />
-              <stop offset="1" stopColor={colorTo} />
-            </radialGradient>
-          </defs>
+        <VectorAvatarGraphic
+          className="avatar-preview"
+          id={id}
+          renderStyle={renderStyle}
+          paint={scene.paint}
+          look={look}
+          bodyColor={colors.body}
+          eyeColor={colors.eyes}
+          headPath={scene.headPath}
+          bodyFillPath={scene.bodyFillPath}
+          backPaths={scene.backPaths}
+          frontPaths={scene.frontPaths}
+          leftPath={scene.leftPath}
+          rightPath={scene.rightPath}
+          leftOpacity={scene.leftOpacity}
+          rightOpacity={scene.rightOpacity}
+          offsetX={scene.offsetX}
+          offsetY={scene.offsetY}
+          extraDefs={
+            <>
+              <linearGradient id={linearId} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stopColor={colorFrom} />
+                <stop offset="1" stopColor={colorTo} />
+              </linearGradient>
+              <radialGradient id={radialId} cx="50%" cy="42%" r="70%">
+                <stop offset="0" stopColor={colorFrom} />
+                <stop offset="1" stopColor={colorTo} />
+              </radialGradient>
+            </>
+          }
+        >
           {background !== 'transparent' && (
             <rect x="-150" y="-150" width="300" height="300" fill={backgroundFill} />
           )}
-          <motion.g style={{ x: scene.offsetX, y: scene.offsetY }}>
-            {scene.backPaths.map((pathValue, index) => (
-              <motion.path d={pathValue} fill={colors.body} key={`back-${index}`} />
-            ))}
-            <motion.path d={scene.headPath} fill={colors.body} />
-            <g clipPath={`url(#${clipId})`}>
-              <motion.path d={scene.leftPath} fill={colors.eyes} opacity={scene.leftOpacity} />
-              <motion.path d={scene.rightPath} fill={colors.eyes} opacity={scene.rightOpacity} />
-            </g>
-            {scene.frontPaths.map((pathValue, index) => (
-              <motion.path d={pathValue} fill={colors.body} key={`front-${index}`} />
-            ))}
-          </motion.g>
-        </svg>
+        </VectorAvatarGraphic>
       )}
     </div>
   )

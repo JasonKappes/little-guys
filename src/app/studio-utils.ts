@@ -9,6 +9,8 @@ import {
   type AvatarEyeDefaults,
 } from '@/features/avatar/avatars'
 import { type BodyNode } from '@/features/avatar/body'
+import { type BodyLimb } from '@/features/avatar/limbs'
+import { type Marking } from '@/features/avatar/markings'
 import { poseFromExpression, renderAvatar, type Expression } from '@/features/avatar/geometry'
 import { type SurfaceConfig } from '@/features/avatar/surfaces'
 
@@ -45,6 +47,8 @@ export const INSPECTOR_FRAME_MS = 1000 / 24
 export const AMBIENT_FRAME_MS = 1000 / 30
 export const createExpressionId = () => `expression-${crypto.randomUUID()}`
 export const emptyBodyNodes: BodyNode[] = []
+export const emptyLimbs: BodyLimb[] = []
+export const emptyMarkings: Marking[] = []
 const previewGeometryCache = new WeakMap<
   Expression,
   WeakMap<
@@ -60,7 +64,9 @@ export const getPreviewGeometry = (
   expression: Expression,
   surface: SurfaceConfig,
   bodyNodes: BodyNode[],
-  eyes: AvatarEyeDefaults = defaultAvatarEyes
+  eyes: AvatarEyeDefaults = defaultAvatarEyes,
+  limbs: BodyLimb[] = emptyLimbs,
+  markings: readonly Marking[] = emptyMarkings
 ) => {
   let surfaceCache = previewGeometryCache.get(expression)
   if (!surfaceCache) {
@@ -72,12 +78,14 @@ export const getPreviewGeometry = (
     bodyCache = new WeakMap()
     surfaceCache.set(surface, bodyCache)
   }
-  const positionKey = JSON.stringify(eyes)
+  const positionKey = JSON.stringify({ eyes, limbs, markings })
   const cached = bodyCache.get(bodyNodes)
   if (cached?.positionKey === positionKey) return cached.geometry
   const geometry = renderAvatar(poseWithAvatarEyes(expression, eyes), surface, 1, {
     includeWire: false,
     bodyNodes,
+    limbs,
+    markings,
   })
   bodyCache.set(bodyNodes, { positionKey, geometry })
   return geometry

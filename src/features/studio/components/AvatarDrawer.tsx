@@ -9,6 +9,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
+import { ColorField } from '@/app/components/controls'
 import { defaultAvatarEyes } from '@/features/avatar/avatars'
 import { ExpressionPreview } from '@/features/avatar/components/ExpressionWorkspace'
 import { defaultExpression } from '@/features/avatar/presets'
@@ -34,11 +35,16 @@ export function AvatarPage({ controller }: { controller: StudioController }) {
     setDeleteAvatarOpen,
     setDraggingAvatarId,
     setFocusAvatarName,
+    stageBackground,
     t,
+    updateStageBackground,
   } = controller
 
   return (
     <div className="panel-stack avatar-page">
+      <section className="stage-background-panel" aria-label={t('Fond de la scène')}>
+        <ColorField label="Scène" value={stageBackground} onChange={updateStageBackground} />
+      </section>
       <section className="avatar-shelf" aria-label={t('Choisir un avatar')}>
         <div className="avatar-shelf-heading">
           <strong>{t('Double-clic pour modifier')}</strong>
@@ -97,9 +103,11 @@ export function AvatarPage({ controller }: { controller: StudioController }) {
                         expression={expressions[0] ?? defaultExpression}
                         surface={avatar.body.primary}
                         bodyNodes={avatar.body.nodes}
+                        limbs={avatar.body.limbs}
                         colors={avatar.colors}
                         avatarEyes={avatar.eyes ?? defaultAvatarEyes}
                         renderStyle={avatar.renderStyle}
+                        look={avatar}
                         id={`avatar-${avatar.id}`}
                       />
                       <span>{avatar.name}</span>

@@ -22,8 +22,12 @@ export type AvatarExportPayload = {
     name: string
     surface: StudioAvatar['body']['primary']
     bodyNodes: StudioAvatar['body']['nodes']
+    limbs: StudioAvatar['body']['limbs']
     colors: StudioAvatar['colors']
     renderStyle: StudioAvatar['renderStyle']
+    palette: StudioAvatar['palette']
+    shading: StudioAvatar['shading']
+    markings: StudioAvatar['markings']
   }
   expressions: Record<string, Expression>
   animations: Record<string, AvatarExportAnimation>
@@ -92,8 +96,12 @@ export const createAvatarExportPayload = (
       name: avatar.name,
       surface: avatar.body.primary,
       bodyNodes: avatar.body.nodes,
+      limbs: avatar.body.limbs,
       colors: avatar.colors,
       renderStyle: avatar.renderStyle,
+      palette: avatar.palette,
+      shading: avatar.shading,
+      markings: avatar.markings,
     },
     expressions: exportedExpressions,
     animations,
